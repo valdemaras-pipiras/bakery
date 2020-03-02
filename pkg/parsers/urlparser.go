@@ -1,7 +1,6 @@
 package parsers
 
 import (
-	"fmt"
 	"math"
 	"path"
 	"regexp"
@@ -127,11 +126,15 @@ func URLParse(urlpath string) (string, *MediaFilters, error) {
 
 		filters := strings.Split(subparts[2], ",")
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 		var err error
 =======
 		fmt.Println(filters)
 >>>>>>> implement basic method of applying bitrate filter to audio/video types
+=======
+
+>>>>>>> add some tests
 		switch key := subparts[1]; key {
 		case "v":
 			for _, videoType := range filters {
