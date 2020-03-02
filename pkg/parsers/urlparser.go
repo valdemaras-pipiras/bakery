@@ -63,6 +63,7 @@ type Trim struct {
 
 // MediaFilters is a struct that carry all the information passed via url
 type MediaFilters struct {
+<<<<<<< HEAD
 	Videos            []VideoType       `json:",omitempty"`
 	Audios            []AudioType       `json:",omitempty"`
 	AudioLanguages    []AudioLanguage   `json:",omitempty"`
@@ -74,6 +75,18 @@ type MediaFilters struct {
 	Plugins           []string          `json:",omitempty"`
 	Trim              *Trim             `json:",omitempty"`
 	Protocol          Protocol          `json:"protocol"`
+=======
+	Videos             []VideoType       `json:",omitempty"`
+	Audios             []AudioType       `json:",omitempty"`
+	AudioLanguages     []AudioLanguage   `json:",omitempty"`
+	CaptionLanguages   []CaptionLanguage `json:",omitempty"`
+	CaptionTypes       []CaptionType     `json:",omitempty"`
+	FilterStreamTypes  []StreamType      `json:",omitempty"`
+	FilterBitrateTypes []StreamType      `json:",omitempty"`
+	MaxBitrate         int               `json:",omitempty"`
+	MinBitrate         int               `json:",omitempty"`
+	Protocol           Protocol          `json:"protocol"`
+>>>>>>> implement basic method of applying bitrate filter to audio/video types
 }
 
 var urlParseRegexp = regexp.MustCompile(`(.*?)\((.*)\)`)
@@ -113,8 +126,12 @@ func URLParse(urlpath string) (string, *MediaFilters, error) {
 		}
 
 		filters := strings.Split(subparts[2], ",")
+<<<<<<< HEAD
 
 		var err error
+=======
+		fmt.Println(filters)
+>>>>>>> implement basic method of applying bitrate filter to audio/video types
 		switch key := subparts[1]; key {
 		case "v":
 			for _, videoType := range filters {
@@ -150,6 +167,7 @@ func URLParse(urlpath string) (string, *MediaFilters, error) {
 				mf.FilterStreamTypes = append(mf.FilterStreamTypes, StreamType(streamType))
 			}
 		case "b":
+<<<<<<< HEAD
 			if filters[0] != "" {
 				mf.MinBitrate, err = strconv.Atoi(filters[0])
 				if err != nil {
@@ -181,6 +199,17 @@ func URLParse(urlpath string) (string, *MediaFilters, error) {
 				if err != nil {
 					return keyError("trim", err)
 				}
+=======
+			for i := 0; i < len(filters)-2; i++ {
+				mf.FilterBitrateTypes = append(mf.FilterBitrateTypes, StreamType(filters[i]))
+			}
+			if filters[len(filters)-2] != "" {
+				mf.MinBitrate, _ = strconv.Atoi(filters[len(filters)-2])
+			}
+
+			if filters[len(filters)-1] != "" {
+				mf.MaxBitrate, _ = strconv.Atoi(filters[len(filters)-1])
+>>>>>>> implement basic method of applying bitrate filter to audio/video types
 			}
 
 			if isGreater(int(trim.Start), int(trim.End)) {
