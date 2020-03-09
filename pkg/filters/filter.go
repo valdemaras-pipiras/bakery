@@ -40,7 +40,6 @@ func ValidCodecs(codec string, filter CodecFilterID) bool {
 	return strings.Contains(codec, string(filter))
 }
 
-<<<<<<< HEAD
 // Returns true if given codec is an audio codec (mp4a, ec-3, or ac-3)
 func isAudioCodec(codec string) bool {
 	return (ValidCodecs(codec, aacCodec) ||
@@ -59,7 +58,7 @@ func isVideoCodec(codec string) bool {
 func isCaptionCodec(codec string) bool {
 	return (ValidCodecs(codec, stppCodec) ||
 		ValidCodecs(codec, wvttCodec))
-=======
+		
 // ValidBitrateRange returns true if the specified min and max bitrates create a valid range
 func ValidBitrateRange(minBitrate int, maxBitrate int) bool {
 	return (minBitrate >= 0 && maxBitrate <= math.MaxInt32) &&
@@ -72,14 +71,14 @@ func ValidBitrateRange(minBitrate int, maxBitrate int) bool {
 func DefinesBitrateFilter(f *parsers.MediaFilters) bool {
 	overall := ValidBitrateRange(f.MinBitrate, f.MaxBitrate)
 	if overall {
-		f.AudioSubFilters.MinBitrate = max(f.AudioSubFilters.MinBitrate, f.MinBitrate)
-		f.AudioSubFilters.MaxBitrate = min(f.AudioSubFilters.MaxBitrate, f.MaxBitrate)
-		f.VideoSubFilters.MinBitrate = max(f.VideoSubFilters.MinBitrate, f.MinBitrate)
-		f.VideoSubFilters.MaxBitrate = min(f.VideoSubFilters.MaxBitrate, f.MaxBitrate)
+		f.AudioFilters.MinBitrate = max(f.AudioFilters.MinBitrate, f.MinBitrate)
+		f.AudioFilters.MaxBitrate = min(f.AudioFilters.MaxBitrate, f.MaxBitrate)
+		f.VideoFilters.MinBitrate = max(f.VideoFilters.MinBitrate, f.MinBitrate)
+		f.VideoFilters.MaxBitrate = min(f.VideoFilters.MaxBitrate, f.MaxBitrate)
 		return true
 	} else {
-		audio := ValidBitrateRange(f.AudioSubFilters.MinBitrate, f.AudioSubFilters.MaxBitrate)
-		video := ValidBitrateRange(f.VideoSubFilters.MinBitrate, f.VideoSubFilters.MaxBitrate)
+		audio := ValidBitrateRange(f.AudioFilters.MinBitrate, f.AudioFilters.MaxBitrate)
+		video := ValidBitrateRange(f.VideoFilters.MinBitrate, f.VideoFilters.MaxBitrate)
 		return audio || video
 	}
 }
@@ -98,5 +97,4 @@ func min(a int, b int) int {
 		return a
 	}
 	return b
->>>>>>> continue working on nested codecs
 }
