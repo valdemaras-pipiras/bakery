@@ -1,7 +1,6 @@
 package parsers
 
 import (
-	"fmt"
 	"math"
 	"path"
 	"regexp"
@@ -74,19 +73,6 @@ type Trim struct {
 
 // MediaFilters is a struct that carry all the information passed via url
 type MediaFilters struct {
-<<<<<<< HEAD
-	Videos            []VideoType       `json:",omitempty"`
-	Audios            []AudioType       `json:",omitempty"`
-	AudioLanguages    []AudioLanguage   `json:",omitempty"`
-	CaptionLanguages  []CaptionLanguage `json:",omitempty"`
-	CaptionTypes      []CaptionType     `json:",omitempty"`
-	FilterStreamTypes []StreamType      `json:",omitempty"`
-	MaxBitrate        int               `json:",omitempty"`
-	MinBitrate        int               `json:",omitempty"`
-	Plugins           []string          `json:",omitempty"`
-	Trim              *Trim             `json:",omitempty"`
-	Protocol          Protocol          `json:"protocol"`
-=======
 	Videos             []VideoType       `json:",omitempty"`
 	VideoSubFilters    Subfilters        `json:",omitempty"`
 	Audios             []AudioType       `json:",omitempty"`
@@ -98,19 +84,17 @@ type MediaFilters struct {
 	FilterBitrateTypes []StreamType      `json:",omitempty"`
 	MaxBitrate         int               `json:",omitempty"`
 	MinBitrate         int               `json:",omitempty"`
+	Plugins           []string          `json:",omitempty"`
+	Trim              *Trim             `json:",omitempty"`
 	Protocol           Protocol          `json:"protocol"`
->>>>>>> implement basic method of applying bitrate filter to audio/video types
 }
 
-<<<<<<< HEAD
-=======
 type Subfilters struct {
 	MinBitrate int     `json:",omitempty"`
 	MaxBitrate int     `json:",omitempty"`
 	Codecs     []Codec `json:",omitempty"`
 }
 
->>>>>>> very basic nested audio/video bitrate filter
 var urlParseRegexp = regexp.MustCompile(`(.*?)\((.*)\)`)
 
 // URLParse will generate a MediaFilters struct with
@@ -149,22 +133,13 @@ func URLParse(urlpath string) (string, *MediaFilters, error) {
 		}
 
 		filters := strings.Split(subparts[2], ",")
-<<<<<<< HEAD
-<<<<<<< HEAD
 
 		var err error
-=======
-		fmt.Println(filters)
->>>>>>> implement basic method of applying bitrate filter to audio/video types
-=======
 
-<<<<<<< HEAD
->>>>>>> add some tests
-=======
+
 		tesRX := regexp.MustCompile(`\),`)
 		subfilters := SplitAfter(subparts[2], tesRX)
 
->>>>>>> very basic nested audio/video bitrate filter
 		switch key := subparts[1]; key {
 		case "v":
 			for _, sf := range subfilters {
@@ -174,20 +149,21 @@ func URLParse(urlpath string) (string, *MediaFilters, error) {
 				if len(splitSubfilter) == 0 {
 					key = "c"
 					param = strings.Split(sf, ",")
+					for _, videoType := range filters {
+						if videoType == "hdr10" {
+							mf.Videos = append(mf.Videos, VideoType("hev1.2"), VideoType("hvc1.2"))
+							continue
+						}
+
+						mf.Videos = append(mf.Videos, VideoType(videoType))
+					}
 				} else {
 					key = splitSubfilter[1]
 					param = strings.Split(splitSubfilter[2], ",")
 				}
 				mf.normalizeSubfilter(StreamType("video"), key, param)
 			}
-			for _, videoType := range filters {
-				if videoType == "hdr10" {
-					mf.Videos = append(mf.Videos, VideoType("hev1.2"), VideoType("hvc1.2"))
-					continue
-				}
 
-				mf.Videos = append(mf.Videos, VideoType(videoType))
-			}
 		case "a":
 			for _, sf := range subfilters {
 				splitSubfilter := re.FindStringSubmatch(sf) // right now, assuming the nested filters are of valid form, maybe add a check here for that
@@ -196,15 +172,16 @@ func URLParse(urlpath string) (string, *MediaFilters, error) {
 				if len(splitSubfilter) == 0 {
 					key = "c"
 					param = strings.Split(sf, ",")
+					for _, audioType := range filters {
+						mf.Audios = append(mf.Audios, AudioType(audioType))
+					}
 				} else {
 					key = splitSubfilter[1]
 					param = strings.Split(splitSubfilter[2], ",")
 				}
 				mf.normalizeSubfilter(StreamType("audio"), key, param)
 			}
-			for _, audioType := range filters {
-				mf.Audios = append(mf.Audios, AudioType(audioType))
-			}
+
 		case "al":
 			for _, audioLanguage := range filters {
 				mf.AudioLanguages = append(mf.AudioLanguages, AudioLanguage(audioLanguage))
@@ -226,8 +203,6 @@ func URLParse(urlpath string) (string, *MediaFilters, error) {
 				mf.FilterStreamTypes = append(mf.FilterStreamTypes, StreamType(streamType))
 			}
 		case "b":
-<<<<<<< HEAD
-<<<<<<< HEAD
 			if filters[0] != "" {
 				mf.MinBitrate, err = strconv.Atoi(filters[0])
 				if err != nil {
@@ -259,30 +234,10 @@ func URLParse(urlpath string) (string, *MediaFilters, error) {
 				if err != nil {
 					return keyError("trim", err)
 				}
-=======
-			for i := 0; i < len(filters)-2; i++ {
-				mf.FilterBitrateTypes = append(mf.FilterBitrateTypes, StreamType(filters[i]))
-			}
-			if filters[len(filters)-2] != "" {
-				mf.MinBitrate, _ = strconv.Atoi(filters[len(filters)-2])
-			}
-
-			if filters[len(filters)-1] != "" {
-				mf.MaxBitrate, _ = strconv.Atoi(filters[len(filters)-1])
->>>>>>> implement basic method of applying bitrate filter to audio/video types
 			}
 
 			if isGreater(int(trim.Start), int(trim.End)) {
 				return keyError("trim", fmt.Errorf("Start Time is greater than or equal to End Time"))
-=======
-			if filters[0] != "" {
-				mf.MinBitrate, _ = strconv.Atoi(filters[0])
-			}
-
-			if filters[1] != "" {
-				mf.MaxBitrate, _ = strconv.Atoi(filters[1])
->>>>>>> very basic nested audio/video bitrate filter
-			}
 
 			mf.Trim = &trim
 		}
@@ -341,6 +296,7 @@ func (f *MediaFilters) initializeBitrateRange() {
 	f.VideoSubFilters.MaxBitrate = math.MaxInt32
 }
 
+// SplitAfter splits a string after the matchs of the specified regexp
 func SplitAfter(s string, re *regexp.Regexp) []string {
 	var splitResults []string
 	var position int
@@ -356,6 +312,7 @@ func SplitAfter(s string, re *regexp.Regexp) []string {
 	return append(splitResults, s[position:])
 }
 
+// normalizeSubfilter takes a subfilter and sets AudioSubFilters' or VideoSubFilters' values accordingly.
 func (f *MediaFilters) normalizeSubfilter(streamType StreamType, key string, values []string) {
 	var streamSubfilters *Subfilters
 	switch streamType {
@@ -364,11 +321,15 @@ func (f *MediaFilters) normalizeSubfilter(streamType StreamType, key string, val
 	case "video":
 		streamSubfilters = &f.VideoSubFilters
 	}
-	fmt.Printf("key: %v value: %v\n", key, values)
+
 	switch key {
 	case "c":
 		for _, v := range values {
-			streamSubfilters.Codecs = append(streamSubfilters.Codecs, Codec(v))
+			if v == "hdr10" {
+				streamSubfilters.Codecs = append(streamSubfilters.Codecs, Codec("hev1.2"), Codec("hvc1.2"))
+			} else {
+				streamSubfilters.Codecs = append(streamSubfilters.Codecs, Codec(v))
+			}
 		}
 	case "b":
 		if values[0] != "" {

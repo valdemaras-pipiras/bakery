@@ -24,7 +24,7 @@ func TestURLParseUrl(t *testing.T) {
 				MinBitrate: 0,
 				VideoSubFilters: Subfilters{
 					MaxBitrate: math.MaxInt32,
-					Codecs:     []Codec{codecHDR10},
+					Codecs:     []Codec{"hev1.2", "hvc1.2"},
 				},
 				AudioSubFilters: Subfilters{
 					MaxBitrate: math.MaxInt32,
@@ -42,7 +42,7 @@ func TestURLParseUrl(t *testing.T) {
 				MinBitrate: 0,
 				VideoSubFilters: Subfilters{
 					MaxBitrate: math.MaxInt32,
-					Codecs:     []Codec{codecHDR10, codecHEVC},
+					Codecs:     []Codec{"hev1.2", "hvc1.2", codecHEVC},
 				},
 				AudioSubFilters: Subfilters{
 					MaxBitrate: math.MaxInt32,
@@ -61,7 +61,7 @@ func TestURLParseUrl(t *testing.T) {
 				MinBitrate: 0,
 				VideoSubFilters: Subfilters{
 					MaxBitrate: math.MaxInt32,
-					Codecs:     []Codec{codecHDR10, codecHEVC},
+					Codecs:     []Codec{"hev1.2", "hvc1.2", codecHEVC},
 				},
 				AudioSubFilters: Subfilters{
 					MaxBitrate: math.MaxInt32,
@@ -83,7 +83,7 @@ func TestURLParseUrl(t *testing.T) {
 				MinBitrate:       100,
 				VideoSubFilters: Subfilters{
 					MaxBitrate: math.MaxInt32,
-					Codecs:     []Codec{codecHDR10, codecHEVC},
+					Codecs:     []Codec{"hev1.2", "hvc1.2", codecHEVC},
 				},
 				AudioSubFilters: Subfilters{
 					MaxBitrate: math.MaxInt32,
@@ -206,6 +206,56 @@ func TestURLParseUrl(t *testing.T) {
 				MaxBitrate:         1000,
 				VideoSubFilters: Subfilters{
 					MaxBitrate: math.MaxInt32,
+				},
+				AudioSubFilters: Subfilters{
+					MaxBitrate: math.MaxInt32,
+				},
+			},
+			"/",
+		},
+		{
+			"nested audio and video bitrate filters",
+			"/a(b(100,))/v(b(,5000))/",
+			MediaFilters{
+				MaxBitrate: math.MaxInt32,
+				MinBitrate: 0,
+				VideoSubFilters: Subfilters{
+					MaxBitrate: 5000,
+				},
+				AudioSubFilters: Subfilters{
+					MinBitrate: 100,
+					MaxBitrate: math.MaxInt32,
+				},
+			},
+			"/",
+		},
+		{
+			"nested codec and bitrate filters in audio",
+			"/a(b(100,200),c(ac-3,aac))/",
+			MediaFilters{
+				MaxBitrate: math.MaxInt32,
+				MinBitrate: 0,
+				VideoSubFilters: Subfilters{
+					MaxBitrate: math.MaxInt32,
+				},
+				AudioSubFilters: Subfilters{
+					MinBitrate: 100,
+					MaxBitrate: 200,
+					Codecs:     []Codec{codecAC3, codecAAC},
+				},
+			},
+			"/",
+		},
+		{
+			"nested codec and bitrate filters in video, plus overall bitrate filters",
+			"/v(c(avc,hdr10),b(1000,2000))/",
+			MediaFilters{
+				MaxBitrate: math.MaxInt32,
+				MinBitrate: 0,
+				VideoSubFilters: Subfilters{
+					MaxBitrate: 2000,
+					MinBitrate: 1000,
+					Codecs:     []Codec{codecH264, "hev1.2", "hvc1.2"},
 				},
 				AudioSubFilters: Subfilters{
 					MaxBitrate: math.MaxInt32,
