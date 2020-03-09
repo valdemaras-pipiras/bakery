@@ -85,7 +85,7 @@ func (d *DASHFilter) getFilters(filters *parsers.MediaFilters) []execFilter {
 		filterList = append(filterList, d.filterVideoTypes)
 	}
 
-	if filters.Audios != nil {
+	if filters.AudioFilters.Codecs != nil {
 		filterList = append(filterList, d.filterAudioTypes)
 	}
 
@@ -98,7 +98,7 @@ func (d *DASHFilter) getFilters(filters *parsers.MediaFilters) []execFilter {
 
 func (d *DASHFilter) filterVideoTypes(filters *parsers.MediaFilters, manifest *mpd.MPD) {
 	supportedVideoTypes := map[string]struct{}{}
-	for _, videoType := range filters.Videos {
+	for _, videoType := range filters.VideoFilters.Codecs {
 		supportedVideoTypes[string(videoType)] = struct{}{}
 	}
 
@@ -107,7 +107,7 @@ func (d *DASHFilter) filterVideoTypes(filters *parsers.MediaFilters, manifest *m
 
 func (d *DASHFilter) filterAudioTypes(filters *parsers.MediaFilters, manifest *mpd.MPD) {
 	supportedAudioTypes := map[string]struct{}{}
-	for _, audioType := range filters.Audios {
+	for _, audioType := range filters.AudioFilters.Codecs {
 		supportedAudioTypes[string(audioType)] = struct{}{}
 	}
 
@@ -225,9 +225,9 @@ func (d *DASHFilter) filterBandwidth(filters *parsers.MediaFilters, manifest *mp
 				// set subfilter equivalent to the subfilter of the adaptation set's content type
 				switch *as.ContentType {
 				case string(audioContentType):
-					subfilter = &filters.AudioSubFilters
+					subfilter = &filters.AudioFilters
 				case string(videoContentType):
-					subfilter = &filters.VideoSubFilters
+					subfilter = &filters.VideoFilters
 				default:
 					subfilter = nil
 				}
