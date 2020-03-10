@@ -31,6 +31,7 @@ func NewPropeller(c config.Config, orgID string, channelID string) (*Propeller, 
 	if err != nil {
 		return &Propeller{}, fmt.Errorf("fetching propeller channel: %w", err)
 	}
+
 	return &Propeller{
 		URL:       propellerURL,
 		OrgID:     orgID,
