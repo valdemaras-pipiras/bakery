@@ -73,9 +73,7 @@ type Trim struct {
 
 // MediaFilters is a struct that carry all the information passed via url
 type MediaFilters struct {
-	Videos             []VideoType       `json:",omitempty"`
 	VideoFilters       Subfilters        `json:",omitempty"`
-	Audios             []AudioType       `json:",omitempty"`
 	AudioFilters       Subfilters        `json:",omitempty"`
 	AudioLanguages     []AudioLanguage   `json:",omitempty"`
 	CaptionLanguages   []CaptionLanguage `json:",omitempty"`
@@ -149,13 +147,6 @@ func URLParse(urlpath string) (string, *MediaFilters, error) {
 				if len(splitSubfilter) == 0 {
 					key = "codec"
 					param = strings.Split(sf, ",")
-					for _, videoType := range filters {
-						if videoType == "hdr10" {
-							mf.Videos = append(mf.Videos, "hev1.2", "hvc1.2")
-						} else {
-							mf.Videos = append(mf.Videos, VideoType(videoType))
-						}
-					}
 				} else {
 					key = splitSubfilter[1]
 					param = strings.Split(splitSubfilter[2], ",")
@@ -192,9 +183,6 @@ func URLParse(urlpath string) (string, *MediaFilters, error) {
 				if len(splitSubfilter) == 0 {
 					key = "codec"
 					param = strings.Split(sf, ",")
-					for _, audioType := range filters {
-						mf.Audios = append(mf.Audios, AudioType(audioType))
-					}
 				} else {
 					key = splitSubfilter[1]
 					param = strings.Split(splitSubfilter[2], ",")
