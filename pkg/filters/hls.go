@@ -3,6 +3,7 @@ package filters
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/url"
 	"path/filepath"
 	"strings"
@@ -76,10 +77,7 @@ func (h *HLSFilter) FilterManifest(filters *parsers.MediaFilters) (string, error
 
 		uri := normalizedVariant.URI
 		if filters.Trim != nil {
-			encode := []byte(uri)
-			uri = base64.StdEncoding.EncodeToString(encode)
-			//TODO properly add start/end here
-			uri = "http://localhost:8084/t(1000,10000)/propeller/cbsi679d/wcbsbbc1/" + uri + ".m3u8"
+			uri = h.normalizeTrimmedVariant(filters, uri)
 		}
 
 		filteredManifest.Append(uri, normalizedVariant.Chunklist, normalizedVariant.VariantParams)
@@ -185,6 +183,14 @@ func (h *HLSFilter) normalizeVariant(v *m3u8.Variant, absolute url.URL) (*m3u8.V
 	return v, nil
 }
 
+func (h *HLSFilter) normalizeTrimmedVariant(filters *parsers.MediaFilters, uri string) string {
+	encoded := base64.StdEncoding.EncodeToString([]byte(uri))
+	start := filters.Trim.Start
+	end := filters.Trim.End
+
+	return fmt.Sprintf("%v/t(%v,%v)/%v.m3u8", h.config.Hostname, start, end, encoded)
+}
+
 func combinedIfRelative(uri string, absolute url.URL) (string, error) {
 	if len(uri) == 0 {
 		return uri, nil
@@ -211,22 +217,49 @@ func isRelative(urlStr string) (bool, error) {
 	return !u.IsAbs(), nil
 }
 
-// Returns true if given codec is an audio codec (mp4a, ec-3, or ac-3)
-func isAudioCodec(codec string) bool {
-	return (ValidCodecs(codec, aacCodec) ||
-		ValidCodecs(codec, ec3Codec) ||
-		ValidCodecs(codec, ac3Codec))
+// FilterRenditionManifest will be responsible for filtering the manifest
+// according  to the MediaFilters
+func (h *HLSFilter) filterRenditionManifest(filters *parsers.MediaFilters, m *m3u8.MediaPlaylist) (string, error) {
+	absolute, err := getAbsoluteURLString(h.manifestURL)
+	if err != nil {
+		if err != nil {
+			return "", fmt.Errorf("fetching absolute url: %w", err)
+		}
+	}
+
+	filteredPlaylist, _ := m3u8.NewMediaPlaylist(uint(len(m.Segments)), uint(len(m.Segments)))
+	seqID := 0
+	for _, segment := range m.Segments {
+		if segment != nil {
+			fmt.Println(segment)
+			if inRange(int64(filters.Trim.Start), int64(filters.Trim.End), segment.ProgramDateTime.Unix()) {
+				segment.URI = absolute + segment.URI
+				err := filteredPlaylist.AppendSegment(segment)
+				if err != nil {
+					return "", fmt.Errorf("trimming segments: %w", err)
+				}
+				seqID++
+			}
+		}
+	}
+
+	filteredPlaylist.SeqNo = uint64(seqID)
+	filteredPlaylist.Close()
+
+	return filteredPlaylist.Encode().String(), nil
 }
 
-// Returns true if given codec is a video codec (hvc, avc, or dvh)
-func isVideoCodec(codec string) bool {
-	return (ValidCodecs(codec, hevcCodec) ||
-		ValidCodecs(codec, avcCodec) ||
-		ValidCodecs(codec, dolbyCodec))
+func inRange(start int64, end int64, value int64) bool {
+	return (start <= value) && (value <= end)
 }
 
-// Returns true if goven codec is a caption codec (stpp or wvtt)
-func isCaptionCodec(codec string) bool {
-	return (ValidCodecs(codec, stppCodec) ||
-		ValidCodecs(codec, wvttCodec))
+//Returns absolute url of given manifest as a string
+func getAbsoluteURLString(path string) (string, error) {
+	absoluteURL, _ := filepath.Split(path)
+	absolute, aErr := url.Parse(absoluteURL)
+	if aErr != nil {
+		return path, aErr
+	}
+
+	return absolute.String(), nil
 }

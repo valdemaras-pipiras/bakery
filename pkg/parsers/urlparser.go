@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 )
 
 // VideoType is the video codec we need in a given playlist
@@ -57,8 +56,8 @@ const (
 
 // Trim is a struct that carries the start and end times to trim playlist
 type Trim struct {
-	Starttime time.Time `json:",omitempty"`
-	Endtime   time.Time `json:",omitempty"`
+	Start int `json:",omitempty"`
+	End   int `json:",omitempty"`
 }
 
 // MediaFilters is a struct that carry all the information passed via url
@@ -159,13 +158,11 @@ func URLParse(urlpath string) (string, *MediaFilters, error) {
 		case "t":
 			var trim Trim
 			if filters[0] != "" {
-				start, _ := strconv.Atoi(filters[0])
-				trim.Starttime = time.Unix(int64(start), 0)
+				trim.Start, _ = strconv.Atoi(filters[0])
 			}
 
 			if filters[1] != "" {
-				end, _ := strconv.Atoi(filters[1])
-				trim.Endtime = time.Unix(int64(end), 0)
+				trim.End, _ = strconv.Atoi(filters[1])
 			}
 
 			mf.Trim = &trim

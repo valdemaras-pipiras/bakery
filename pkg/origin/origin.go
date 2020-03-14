@@ -15,17 +15,19 @@ type Origin interface {
 }
 
 //Manifest struct holds Origin and Path of Manifest
+//Variant level manifests will be base64 encoded absolute path
 type Manifest struct {
-	Origin string
-	Path   string
+	Origin   string
+	Path     string
+	Absolute bool
 }
 
 //Configure will return proper Origin interface
 func Configure(c config.Config, path string) (Origin, error) {
-	fmt.Println(path)
+	var renditionURL string
+
 	if strings.Contains(path, "propeller") {
 		parts := strings.Split(path, "/") //["", "propeller", "orgID", "channelID.m3u8"]
-		var renditionURL string
 		if len(parts) != 4 {
 			if len(parts) != 5 {
 				return &Propeller{}, fmt.Errorf("url path does not follow `/propeller/orgID/channelID.m3u8`")
@@ -44,20 +46,46 @@ func Configure(c config.Config, path string) (Origin, error) {
 		return o, nil
 	}
 
+	//check if rendition URL
+	parts := strings.Split(path, "/")
+	if len(parts) == 2 { //["", "base64.m3u8"]
+		renditionURL, err := decodeRenditionURL(parts[1])
+		if err != nil {
+			return &Manifest{}, fmt.Errorf("configuring rendition url: %w", err)
+		}
+		path = renditionURL
+	}
+
 	return NewManifest(c, path), nil
 }
 
 //NewManifest returns a new Origin struct
 func NewManifest(c config.Config, path string) *Manifest {
+	var absolute bool
+	if strings.Contains(path, "http") {
+		absolute = true
+	}
+
 	return &Manifest{
-		Origin: c.OriginHost,
-		Path:   path,
+		Origin:   c.OriginHost,
+		Path:     path,
+		Absolute: absolute,
 	}
 }
 
 //GetPlaybackURL will retrieve url
 func (m *Manifest) GetPlaybackURL() string {
+	if m.Absolute {
+		return m.Path
+	}
+
 	return m.Origin + m.Path
+}
+
+//GetPath will return Path to manifest
+func (m *Manifest) GetPath() string {
+	path := strings.Split(m.Path, ".")[0] + "/"
+	return path
 }
 
 //FetchManifest will grab manifest contents of configured origin

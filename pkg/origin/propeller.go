@@ -22,6 +22,11 @@ func (p *Propeller) GetPlaybackURL() string {
 	return p.URL
 }
 
+//GetPath will return Path to manifest
+func (p *Propeller) GetPath() string {
+	return fmt.Sprintf("/propeller/%v/%v/", p.OrgID, p.ChannelID)
+}
+
 //FetchManifest will grab manifest contents of configured origin
 func (p *Propeller) FetchManifest(c config.Config) (string, error) {
 	return fetch(c, p.URL)
