@@ -77,6 +77,29 @@ func TestURLParseUrl(t *testing.T) {
 			"/",
 		},
 		{
+			"detect a signle plugin for execution from url",
+			"[plugin1]/some/path/master.m3u8",
+			MediaFilters{
+				MaxBitrate: math.MaxInt32,
+				MinBitrate: 0,
+				Protocol:   ProtocolHLS,
+				Plugins:    []string{"plugin1"},
+			},
+			"/some/path/master.m3u8",
+		},
+		{
+			"detect plugins for execution from url",
+			"/v(hdr10,hevc)/[plugin1,plugin2,plugin3]/some/path/master.m3u8",
+			MediaFilters{
+				Videos:     []VideoType{"hev1.2", "hvc1.2", videoHEVC},
+				MaxBitrate: math.MaxInt32,
+				MinBitrate: 0,
+				Protocol:   ProtocolHLS,
+				Plugins:    []string{"plugin1", "plugin2", "plugin3"},
+			},
+			"/some/path/master.m3u8",
+		},
+		{
 			"detect protocol hls for urls with .m3u8 extension",
 			"/path/here/with/master.m3u8",
 			MediaFilters{

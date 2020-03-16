@@ -19,7 +19,6 @@ type DASHFilter struct {
 	manifestURL     string
 	manifestContent string
 	config          config.Config
-	filters         []execFilter
 }
 
 // NewDASHFilter is the DASH filter constructor
@@ -63,6 +62,12 @@ func (d *DASHFilter) FilterManifest(filters *parsers.MediaFilters) (string, erro
 		filter(filters, manifest)
 	}
 
+	for _, plugin := range filters.Plugins {
+		if exec, ok := pluginDASH[plugin]; ok {
+			exec(manifest)
+		}
+	}
+
 	return manifest.WriteToString()
 }
 
@@ -70,6 +75,10 @@ func (d *DASHFilter) getFilters(filters *parsers.MediaFilters) []execFilter {
 	filterList := []execFilter{}
 	if filters.FilterStreamTypes != nil && len(filters.FilterStreamTypes) > 0 {
 		filterList = append(filterList, d.filterAdaptationSetType)
+	}
+
+	if filters.DefinesBitrateFilter() {
+		filterList = append(filterList, d.filterBandwidth)
 	}
 
 	if filters.Videos != nil {
@@ -82,10 +91,6 @@ func (d *DASHFilter) getFilters(filters *parsers.MediaFilters) []execFilter {
 
 	if filters.CaptionTypes != nil {
 		filterList = append(filterList, d.filterCaptionTypes)
-	}
-
-	if filters.DefinesBitrateFilter() {
-		filterList = append(filterList, d.filterBandwidth)
 	}
 
 	return filterList

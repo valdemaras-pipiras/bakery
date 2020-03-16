@@ -64,10 +64,11 @@ type MediaFilters struct {
 	FilterStreamTypes []StreamType      `json:",omitempty"`
 	MaxBitrate        int               `json:",omitempty"`
 	MinBitrate        int               `json:",omitempty"`
+	Plugins           []string          `json:",omitempty"`
 	Protocol          Protocol          `json:"protocol"`
 }
 
-var urlParseRegexp = regexp.MustCompile(`(.*)\((.*)\)`)
+var urlParseRegexp = regexp.MustCompile(`(.*?)\((.*)\)`)
 
 // URLParse will generate a MediaFilters struct with
 // all the filters that needs to be applied to the
@@ -96,6 +97,9 @@ func URLParse(urlpath string) (string, *MediaFilters, error) {
 		// of the official manifest path so we concatenate to it.
 		subparts := re.FindStringSubmatch(part)
 		if len(subparts) != 3 {
+			if mf.filterPlugins(part) {
+				continue
+			}
 			masterManifestPath = path.Join(masterManifestPath, part)
 			continue
 		}
@@ -148,6 +152,20 @@ func URLParse(urlpath string) (string, *MediaFilters, error) {
 	}
 
 	return masterManifestPath, mf, nil
+}
+
+func (f *MediaFilters) filterPlugins(path string) bool {
+	re := regexp.MustCompile(`\[(.*)\]`)
+	subparts := re.FindStringSubmatch(path)
+
+	if len(subparts) == 2 {
+		for _, plugin := range strings.Split(subparts[1], ",") {
+			f.Plugins = append(f.Plugins, plugin)
+		}
+		return true
+	}
+
+	return false
 }
 
 //DefinesBitrateFilter will check if bitrate filter is set
