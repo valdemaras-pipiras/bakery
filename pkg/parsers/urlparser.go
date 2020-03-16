@@ -111,9 +111,6 @@ func URLParse(urlpath string) (string, *MediaFilters, error) {
 		mf.Protocol = ProtocolDASH
 	}
 
-	// set bitrate defaults
-	//mf.MinBitrate = 0
-	//mf.MaxBitrate = math.MaxInt32
 	mf.initializeBitrateRange()
 
 	for _, part := range parts {
@@ -134,81 +131,18 @@ func URLParse(urlpath string) (string, *MediaFilters, error) {
 
 		var err error
 
-
-		tesRX := regexp.MustCompile(`\),`)
-		subfilters := SplitAfter(subparts[2], tesRX)
+		subfilterRegexp := regexp.MustCompile(`\),`)
+		subfilters := SplitAfter(subparts[2], subfilterRegexp)
 
 		switch key := subparts[1]; key {
 		case "v":
 			for _, sf := range subfilters {
-				splitSubfilter := re.FindStringSubmatch(sf) // right now, assuming the nested filters are of valid form, maybe add a check here for that
-				var key string
-				var param []string
-				if len(splitSubfilter) == 0 {
-					key = "codec"
-					param = strings.Split(sf, ",")
-				} else {
-					key = splitSubfilter[1]
-					param = strings.Split(splitSubfilter[2], ",")
-				}
-
-				// split key by ',' to account for situations like filer(codec,codec,subfilter)
-				splitKey := strings.Split(key, ",")
-				if len(splitKey) == 1 {
-					mf.normalizeSubfilter(StreamType("video"), key, param)
-				} else {
-					var keys []string
-					var params [][]string
-					for i, part := range splitKey {
-						if i == len(splitKey)-1 {
-							keys = append(keys, part)
-							params = append(params, param)
-						} else {
-							keys = append(keys, "codec")
-							params = append(params, []string{part})
-						}
-					}
-
-					for i, _ := range keys {
-						mf.normalizeSubfilter(StreamType("video"), keys[i], params[i])
-					}
-				}
+				mf.findSubfilters(sf, StreamType("video"))
 			}
 
 		case "a":
 			for _, sf := range subfilters {
-				splitSubfilter := re.FindStringSubmatch(sf) // right now, assuming the nested filters are of valid form, maybe add a check here for that
-				var key string
-				var param []string
-				if len(splitSubfilter) == 0 {
-					key = "codec"
-					param = strings.Split(sf, ",")
-				} else {
-					key = splitSubfilter[1]
-					param = strings.Split(splitSubfilter[2], ",")
-				}
-
-				// split key by ',' to account for situations like filer(codec,codec,subfilter)
-				splitKey := strings.Split(key, ",")
-				if len(splitKey) == 1 {
-					mf.normalizeSubfilter(StreamType("audio"), key, param)
-				} else {
-					var keys []string
-					var params [][]string
-					for i, part := range splitKey {
-						if i == len(splitKey)-1 {
-							keys = append(keys, part)
-							params = append(params, param)
-						} else {
-							keys = append(keys, "codec")
-							params = append(params, []string{part})
-						}
-					}
-
-					for i, _ := range keys {
-						mf.normalizeSubfilter(StreamType("audio"), keys[i], params[i])
-					}
-				}
+				mf.findSubfilters(sf, StreamType("audio"))
 			}
 
 		case "al":
@@ -316,6 +250,44 @@ func (f *MediaFilters) BitrateFilterApplies() bool {
 	return overall || audio || video
 }
 
+func (mf *MediaFilters) findSubfilters(subfilter string, streamType StreamType) {
+	// assumes nested filters are properly formatted
+	splitSubfilter := urlParseRegexp.FindStringSubmatch(subfilter)
+	var key string
+	var param []string
+	if len(splitSubfilter) == 0 {
+		key = "codec"
+		param = strings.Split(subfilter, ",")
+	} else {
+		key = splitSubfilter[1]
+		param = strings.Split(splitSubfilter[2], ",")
+	}
+
+	// split key by ',' to account for situations like filter(codec,codec,b(low,high))
+	// as in such a situation, key = codec,codec,b
+	splitKey := strings.Split(key, ",")
+	if len(splitKey) == 1 {
+		mf.normalizeSubfilter(streamType, key, param)
+	} else {
+		var keys []string
+		var params [][]string
+		for i, part := range splitKey {
+			if i == len(splitKey)-1 {
+				keys = append(keys, part)
+				params = append(params, param)
+			} else {
+				keys = append(keys, "codec")
+				params = append(params, []string{part})
+			}
+		}
+
+		for i, _ := range keys {
+			mf.normalizeSubfilter(streamType, keys[i], params[i])
+		}
+	}
+}
+
+// Initialize bitrate range for overall, audio, and video bitrate filters to 0, math.MaxInt32
 func (f *MediaFilters) initializeBitrateRange() {
 	f.MinBitrate = 0
 	f.MaxBitrate = math.MaxInt32

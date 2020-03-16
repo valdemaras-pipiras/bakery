@@ -67,12 +67,14 @@ func ValidBitrateRange(minBitrate int, maxBitrate int) bool {
 }
 
 // DefinesBitrateFilter returns true if a bitrate filter should be applied. This means that
-// at least one of the overall, audio, and video bitrate filters are valid and not the default range
+// at least one of the overall, audio, and video bitrate filters are valid and not the default range.
+// It also sets audio/video subfilters ito be in range of the overall bitrate filters
 func DefinesBitrateFilter(f *parsers.MediaFilters) bool {
 	overall := ValidBitrateRange(f.MinBitrate, f.MaxBitrate)
 	audio := ValidBitrateRange(f.AudioFilters.MinBitrate, f.AudioFilters.MaxBitrate)
 	video := ValidBitrateRange(f.VideoFilters.MinBitrate, f.VideoFilters.MaxBitrate)
 	if overall {
+		// if audio or video subfilters do not overlap with overall bitrate filters, set them equal to overall
 		if audio && (f.AudioFilters.MinBitrate > f.MaxBitrate || f.AudioFilters.MaxBitrate < f.MinBitrate) {
 			f.AudioFilters.MinBitrate = f.MinBitrate
 			f.AudioFilters.MaxBitrate = f.MaxBitrate
@@ -80,6 +82,8 @@ func DefinesBitrateFilter(f *parsers.MediaFilters) bool {
 			f.VideoFilters.MinBitrate = f.MinBitrate
 			f.VideoFilters.MaxBitrate = f.MaxBitrate
 		} else {
+			// otherwise, adjust minBitrate and maxBitrate so that they are in range of overall bitrate
+			// while still maintaining the original min/maxBitrate if that was already in range
 			f.AudioFilters.MinBitrate = max(f.AudioFilters.MinBitrate, f.MinBitrate)
 			f.AudioFilters.MaxBitrate = min(f.AudioFilters.MaxBitrate, f.MaxBitrate)
 			f.VideoFilters.MinBitrate = max(f.VideoFilters.MinBitrate, f.MinBitrate)
