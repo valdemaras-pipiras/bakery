@@ -70,15 +70,23 @@ func ValidBitrateRange(minBitrate int, maxBitrate int) bool {
 // at least one of the overall, audio, and video bitrate filters are valid and not the default range
 func DefinesBitrateFilter(f *parsers.MediaFilters) bool {
 	overall := ValidBitrateRange(f.MinBitrate, f.MaxBitrate)
+	audio := ValidBitrateRange(f.AudioFilters.MinBitrate, f.AudioFilters.MaxBitrate)
+	video := ValidBitrateRange(f.VideoFilters.MinBitrate, f.VideoFilters.MaxBitrate)
 	if overall {
-		f.AudioFilters.MinBitrate = max(f.AudioFilters.MinBitrate, f.MinBitrate)
-		f.AudioFilters.MaxBitrate = min(f.AudioFilters.MaxBitrate, f.MaxBitrate)
-		f.VideoFilters.MinBitrate = max(f.VideoFilters.MinBitrate, f.MinBitrate)
-		f.VideoFilters.MaxBitrate = min(f.VideoFilters.MaxBitrate, f.MaxBitrate)
+		if audio && (f.AudioFilters.MinBitrate > f.MaxBitrate || f.AudioFilters.MaxBitrate < f.MinBitrate) {
+			f.AudioFilters.MinBitrate = f.MinBitrate
+			f.AudioFilters.MaxBitrate = f.MaxBitrate
+		} else if video && (f.VideoFilters.MinBitrate > f.MaxBitrate || f.VideoFilters.MaxBitrate < f.MinBitrate) {
+			f.VideoFilters.MinBitrate = f.MinBitrate
+			f.VideoFilters.MaxBitrate = f.MaxBitrate
+		} else {
+			f.AudioFilters.MinBitrate = max(f.AudioFilters.MinBitrate, f.MinBitrate)
+			f.AudioFilters.MaxBitrate = min(f.AudioFilters.MaxBitrate, f.MaxBitrate)
+			f.VideoFilters.MinBitrate = max(f.VideoFilters.MinBitrate, f.MinBitrate)
+			f.VideoFilters.MaxBitrate = min(f.VideoFilters.MaxBitrate, f.MaxBitrate)
+		}
 		return true
 	} else {
-		audio := ValidBitrateRange(f.AudioFilters.MinBitrate, f.AudioFilters.MaxBitrate)
-		video := ValidBitrateRange(f.VideoFilters.MinBitrate, f.VideoFilters.MaxBitrate)
 		return audio || video
 	}
 }

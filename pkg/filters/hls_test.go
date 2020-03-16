@@ -14,23 +14,36 @@ func TestHLSFilter_FilterManifest_BandwidthFilter(t *testing.T) {
 	baseManifest := `#EXTM3U
 #EXT-X-VERSION:4
 #EXT-X-MEDIA:TYPE=CLOSED-CAPTIONS,GROUP-ID="CC",NAME="ENGLISH",DEFAULT=NO,LANGUAGE="ENG"
-#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=1000,AVERAGE-BANDWIDTH=1000,CLOSED-CAPTIONS="CC"
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=1000,AVERAGE-BANDWIDTH=1000,CODECS="ac-3,avc",CLOSED-CAPTIONS="CC"
 http://existing.base/uri/link_1.m3u8
-#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4000,AVERAGE-BANDWIDTH=4000,CLOSED-CAPTIONS="CC"
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4000,AVERAGE-BANDWIDTH=4000,CODECS="ec-3",CLOSED-CAPTIONS="CC"
 http://existing.base/uri/link_2.m3u8
-`
-
-	manifestRemovedLowerBW := `#EXTM3U
-#EXT-X-VERSION:4
-#EXT-X-MEDIA:TYPE=CLOSED-CAPTIONS,GROUP-ID="CC",NAME="ENGLISH",DEFAULT=NO,LANGUAGE="ENG"
-#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=1000,AVERAGE-BANDWIDTH=1000,CLOSED-CAPTIONS="CC"
-http://existing.base/uri/link_1.m3u8
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4000,AVERAGE-BANDWIDTH=4000,CODECS="avc",CLOSED-CAPTIONS="CC"
+http://existing.base/uri/link_3.m3u8
 `
 
 	manifestRemovedHigherBW := `#EXTM3U
+#EXT-X-VERSION:4
+#EXT-X-MEDIA:TYPE=CLOSED-CAPTIONS,GROUP-ID="CC",NAME="ENGLISH",DEFAULT=NO,LANGUAGE="ENG"
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=1000,AVERAGE-BANDWIDTH=1000,CODECS="ac-3,avc",CLOSED-CAPTIONS="CC"
+http://existing.base/uri/link_1.m3u8
+`
+
+	manifestRemovedHigherBWOnlyAudio := `#EXTM3U
+#EXT-X-VERSION:4
+#EXT-X-MEDIA:TYPE=CLOSED-CAPTIONS,GROUP-ID="CC",NAME="ENGLISH",DEFAULT=NO,LANGUAGE="ENG"
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=1000,AVERAGE-BANDWIDTH=1000,CODECS="ac-3,avc",CLOSED-CAPTIONS="CC"
+http://existing.base/uri/link_1.m3u8
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4000,AVERAGE-BANDWIDTH=4000,CODECS="avc",CLOSED-CAPTIONS="CC"
+http://existing.base/uri/link_3.m3u8
+`
+
+	manifestRemovedLowerBW := `#EXTM3U
 #EXT-X-VERSION:3
-#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4000,AVERAGE-BANDWIDTH=4000,CLOSED-CAPTIONS="CC"
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4000,AVERAGE-BANDWIDTH=4000,CODECS="ec-3",CLOSED-CAPTIONS="CC"
 http://existing.base/uri/link_2.m3u8
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4000,AVERAGE-BANDWIDTH=4000,CODECS="avc",CLOSED-CAPTIONS="CC"
+http://existing.base/uri/link_3.m3u8
 `
 
 	tests := []struct {
@@ -88,7 +101,7 @@ http://existing.base/uri/link_2.m3u8
 				AudioFilters: parsers.Subfilters{MaxBitrate: math.MaxInt32},
 			},
 			manifestContent:       baseManifest,
-			expectManifestContent: manifestRemovedLowerBW,
+			expectManifestContent: manifestRemovedHigherBW,
 		},
 		{
 			name: "when only hitting upper boundary (MaxBitrate = math.MaxInt32), expect results to be filtered",
@@ -98,7 +111,7 @@ http://existing.base/uri/link_2.m3u8
 				AudioFilters: parsers.Subfilters{MaxBitrate: math.MaxInt32},
 			},
 			manifestContent:       baseManifest,
-			expectManifestContent: manifestRemovedHigherBW,
+			expectManifestContent: manifestRemovedLowerBW,
 		},
 		{
 			name: "when invalid minimum bitrate and valid maximum bitrate, expect unfiltered manifest",
@@ -119,6 +132,55 @@ http://existing.base/uri/link_2.m3u8
 			},
 			manifestContent:       baseManifest,
 			expectManifestContent: baseManifest,
+		},
+		{
+			name: "when filtering valid bitrate range in audio only, expect filtered manifest",
+			filters: &parsers.MediaFilters{
+				MinBitrate: 0, MaxBitrate: math.MaxInt32,
+				VideoFilters: parsers.Subfilters{MaxBitrate: math.MaxInt32},
+				AudioFilters: parsers.Subfilters{MinBitrate: 10, MaxBitrate: 3000},
+			},
+			manifestContent:       baseManifest,
+			expectManifestContent: manifestRemovedHigherBWOnlyAudio,
+		},
+		{
+			name: "when filtering a valid audio bitrate range touching upper bound (math.MaxInt32), expect audio to be filtered",
+			filters: &parsers.MediaFilters{
+				MinBitrate: 0, MaxBitrate: math.MaxInt32,
+				VideoFilters: parsers.Subfilters{MaxBitrate: math.MaxInt32},
+				AudioFilters: parsers.Subfilters{MinBitrate: 2000, MaxBitrate: math.MaxInt32},
+			},
+			manifestContent:       baseManifest,
+			expectManifestContent: manifestRemovedLowerBW,
+		},
+		{
+			name: "when given an invalid overall bitrate range and a valid bitrate range for audio, expect audio to be filtered",
+			filters: &parsers.MediaFilters{
+				MinBitrate: -10, MaxBitrate: math.MaxInt32 + 1,
+				VideoFilters: parsers.Subfilters{MaxBitrate: math.MaxInt32},
+				AudioFilters: parsers.Subfilters{MinBitrate: 2000, MaxBitrate: 6000},
+			},
+			manifestContent:       baseManifest,
+			expectManifestContent: manifestRemovedLowerBW,
+		},
+		{
+			name: "when given valid overall bitrate range and an valid bitrate range for video/audio overlapping, but not within overall range, expect manifest to be filtered according to overall bitrate range",
+			filters: &parsers.MediaFilters{
+				MinBitrate: 0, MaxBitrate: 3000,
+				VideoFilters: parsers.Subfilters{MaxBitrate: math.MaxInt32},
+				AudioFilters: parsers.Subfilters{MaxBitrate: math.MaxInt32}},
+			manifestContent:       baseManifest,
+			expectManifestContent: manifestRemovedHigherBW,
+		},
+		{
+			name: "when given valid overall bitrate range and a valid, non-overlapping bitrate range for audio, expect manifest to be filtered according to overall bitrate range",
+			filters: &parsers.MediaFilters{
+				MinBitrate: 100, MaxBitrate: 1000,
+				VideoFilters: parsers.Subfilters{MaxBitrate: math.MaxInt32},
+				AudioFilters: parsers.Subfilters{MinBitrate: 3000, MaxBitrate: 4000},
+			},
+			manifestContent:       baseManifest,
+			expectManifestContent: manifestRemovedHigherBW,
 		},
 	}
 
