@@ -77,7 +77,10 @@ func (h *HLSFilter) FilterManifest(filters *parsers.MediaFilters) (string, error
 
 		uri := normalizedVariant.URI
 		if filters.Trim != nil {
-			uri = h.normalizeTrimmedVariant(filters, uri)
+			uri, err = h.normalizeTrimmedVariant(filters, uri)
+			if err != nil {
+				return "", err
+			}
 		}
 
 		filteredManifest.Append(uri, normalizedVariant.Chunklist, normalizedVariant.VariantParams)
@@ -183,12 +186,16 @@ func (h *HLSFilter) normalizeVariant(v *m3u8.Variant, absolute url.URL) (*m3u8.V
 	return v, nil
 }
 
-func (h *HLSFilter) normalizeTrimmedVariant(filters *parsers.MediaFilters, uri string) string {
+func (h *HLSFilter) normalizeTrimmedVariant(filters *parsers.MediaFilters, uri string) (string, error) {
 	encoded := base64.StdEncoding.EncodeToString([]byte(uri))
 	start := filters.Trim.Start
 	end := filters.Trim.End
+	u, err := url.Parse(uri)
+	if err != nil {
+		return "", err
+	}
 
-	return fmt.Sprintf("%v/t(%v,%v)/%v.m3u8", h.config.Hostname, start, end, encoded)
+	return fmt.Sprintf("%v://%v/t(%v,%v)/%v.m3u8", u.Scheme, h.config.Hostname, start, end, encoded), nil
 }
 
 func combinedIfRelative(uri string, absolute url.URL) (string, error) {
@@ -220,24 +227,31 @@ func isRelative(urlStr string) (bool, error) {
 // FilterRenditionManifest will be responsible for filtering the manifest
 // according  to the MediaFilters
 func (h *HLSFilter) filterRenditionManifest(filters *parsers.MediaFilters, m *m3u8.MediaPlaylist) (string, error) {
-	absolute, err := getAbsoluteURLString(h.manifestURL)
-	if err != nil {
-		if err != nil {
-			return "", fmt.Errorf("fetching absolute url: %w", err)
-		}
-	}
-
 	filteredPlaylist, _ := m3u8.NewMediaPlaylist(uint(len(m.Segments)), uint(len(m.Segments)))
 	seqID := 0
+
 	for _, segment := range m.Segments {
 		if segment != nil {
-			fmt.Println(segment)
 			if inRange(int64(filters.Trim.Start), int64(filters.Trim.End), segment.ProgramDateTime.Unix()) {
-				segment.URI = absolute + segment.URI
-				err := filteredPlaylist.AppendSegment(segment)
+				isRelativeURL, err := isRelative(segment.URI)
 				if err != nil {
 					return "", fmt.Errorf("trimming segments: %w", err)
 				}
+
+				if isRelativeURL {
+					absolute, err := getAbsoluteURLString(h.manifestURL)
+					if err != nil {
+						return "", fmt.Errorf("fetching absolute url: %w", err)
+					}
+
+					segment.URI = absolute + segment.URI
+				}
+
+				err = filteredPlaylist.AppendSegment(segment)
+				if err != nil {
+					return "", fmt.Errorf("trimming segments: %w", err)
+				}
+
 				seqID++
 			}
 		}

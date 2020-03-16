@@ -15,7 +15,7 @@ type Config struct {
 	LogLevel      string `envconfig:"LOG_LEVEL" default:"debug"`
 	OriginHost    string `envconfig:"ORIGIN_HOST"`
 	PropellerHost string `envconfig:"PROPELLER_HOST"`
-	Hostname      string `envconfig:"HOSTNAME"  default:"http://localhost"`
+	Hostname      string `envconfig:"HOSTNAME"  default:"localhost"`
 	Client        HTTPClient
 }
 
