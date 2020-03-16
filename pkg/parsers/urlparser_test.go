@@ -77,6 +77,20 @@ func TestURLParseUrl(t *testing.T) {
 			"/",
 		},
 		{
+			"trim filter",
+			"/t(100,1000)/path/to/test.m3u8",
+			MediaFilters{
+				Protocol:   ProtocolHLS,
+				MaxBitrate: math.MaxInt32,
+				MinBitrate: 0,
+				Trim: &Trim{
+					Start: 100,
+					End:   1000,
+				},
+			},
+			"/path/to/test.m3u8",
+		},
+		{
 			"detect a signle plugin for execution from url",
 			"[plugin1]/some/path/master.m3u8",
 			MediaFilters{
