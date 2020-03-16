@@ -311,11 +311,17 @@ func TestURLParseUrl(t *testing.T) {
 			"detect filters for propeller channels and set path properly",
 			"/v(avc)/a(aac)/propeller/orgID/master.m3u8",
 			MediaFilters{
-				Videos:     []VideoType{videoH264},
-				Audios:     []AudioType{audioAAC},
 				Protocol:   ProtocolHLS,
 				MaxBitrate: math.MaxInt32,
 				MinBitrate: 0,
+				VideoFilters: Subfilters{
+					MaxBitrate: math.MaxInt32,
+					Codecs:     []Codec{codecH264},
+				},
+				AudioFilters: Subfilters{
+					MaxBitrate: math.MaxInt32,
+					Codecs:     []Codec{codecAAC},
+				},
 			},
 			"/propeller/orgID/master.m3u8",
 			false,
@@ -327,6 +333,12 @@ func TestURLParseUrl(t *testing.T) {
 				Protocol:   ProtocolHLS,
 				MaxBitrate: math.MaxInt32,
 				MinBitrate: 0,
+				VideoFilters: Subfilters{
+					MaxBitrate: math.MaxInt32,
+				},
+				AudioFilters: Subfilters{
+					MaxBitrate: math.MaxInt32,
+				},
 			},
 			"/propeller/orgID/master.m3u8",
 			false,
