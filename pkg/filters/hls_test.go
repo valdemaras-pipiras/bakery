@@ -1301,6 +1301,32 @@ https://existing.base/path/chan_1/chan_1_20200311T202818_1_00027.ts
 https://existing.base/path/chan_1/chan_1_20200311T202824_1_00028.ts
 `
 
+	variantManifestWithNoPDT := `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-MEDIA-SEQUENCE:10
+#EXT-X-TARGETDURATION:6
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202743_1_00019.ts
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202748_1_00020.ts
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202754_1_00021.ts
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202801_1_00022.ts
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202806_1_00023.ts
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202813_1_00024.ts
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202818_1_00025.ts
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202824_1_00026.ts
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202818_1_00027.ts
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202824_1_00028.ts
+`
+
 	variantManifestTrimmed := `#EXTM3U
 #EXT-X-VERSION:3
 #EXT-X-MEDIA-SEQUENCE:0
@@ -1347,6 +1373,13 @@ https://existing.base/path/chan_1/chan_1_20200311T202818_1_00025.ts
 			filters:               &parsers.MediaFilters{Trim: trim},
 			manifestContent:       variantManifestWithAbsoluteURLs,
 			expectManifestContent: variantManifestTrimmed,
+		},
+		{
+			name:                  "when no pdt present for segment, error is thrown",
+			filters:               &parsers.MediaFilters{Trim: trim},
+			manifestContent:       variantManifestWithNoPDT,
+			expectManifestContent: "",
+			expectErr:             true,
 		},
 	}
 
