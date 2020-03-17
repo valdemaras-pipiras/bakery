@@ -20,7 +20,7 @@ type Origin interface {
 //Variant level manifests will be base64 encoded absolute path
 type Manifest struct {
 	Origin string
-	Path   url.URL
+	URL    url.URL
 }
 
 //Configure will return proper Origin interface
@@ -64,17 +64,17 @@ func NewManifest(c config.Config, p string) (*Manifest, error) {
 
 	return &Manifest{
 		Origin: c.OriginHost,
-		Path:   *u,
+		URL:    *u,
 	}, nil
 }
 
 //GetPlaybackURL will retrieve url
 func (m *Manifest) GetPlaybackURL() string {
-	if m.Path.IsAbs() {
-		return m.Path.String()
+	if m.URL.IsAbs() {
+		return m.URL.String()
 	}
 
-	return m.Origin + m.Path.String()
+	return m.Origin + m.URL.String()
 }
 
 //FetchManifest will grab manifest contents of configured origin
