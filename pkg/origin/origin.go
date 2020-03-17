@@ -1,8 +1,10 @@
 package origin
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"strings"
 
 	"github.com/cbsinteractive/bakery/pkg/config"
@@ -15,9 +17,10 @@ type Origin interface {
 }
 
 //Manifest struct holds Origin and Path of Manifest
+//Variant level manifests will be base64 encoded absolute path
 type Manifest struct {
 	Origin string
-	Path   string
+	URL    url.URL
 }
 
 //Configure will return proper Origin interface
@@ -39,20 +42,39 @@ func Configure(c config.Config, path string) (Origin, error) {
 		return o, nil
 	}
 
-	return NewManifest(c, path), nil
+	//check if rendition URL
+	parts := strings.Split(path, "/")
+	if len(parts) == 2 { //["", "base64.m3u8"]
+		renditionURL, err := decodeRenditionURL(parts[1])
+		if err != nil {
+			return &Manifest{}, fmt.Errorf("configuring rendition url: %w", err)
+		}
+		path = renditionURL
+	}
+
+	return NewManifest(c, path)
 }
 
 //NewManifest returns a new Origin struct
-func NewManifest(c config.Config, path string) *Manifest {
+func NewManifest(c config.Config, p string) (*Manifest, error) {
+	u, err := url.Parse(p)
+	if err != nil {
+		return &Manifest{}, nil
+	}
+
 	return &Manifest{
 		Origin: c.OriginHost,
-		Path:   path,
-	}
+		URL:    *u,
+	}, nil
 }
 
 //GetPlaybackURL will retrieve url
 func (m *Manifest) GetPlaybackURL() string {
-	return m.Origin + m.Path
+	if m.URL.IsAbs() {
+		return m.URL.String()
+	}
+
+	return m.Origin + m.URL.String()
 }
 
 //FetchManifest will grab manifest contents of configured origin
@@ -77,4 +99,14 @@ func fetch(c config.Config, manifestURL string) (string, error) {
 	}
 
 	return string(contents), nil
+}
+
+func decodeRenditionURL(rendition string) (string, error) {
+	rendition = strings.TrimSuffix(rendition, ".m3u8")
+	url, err := base64.RawURLEncoding.DecodeString(rendition)
+	if err != nil {
+		return "", fmt.Errorf("decoding rendition: %w", err)
+	}
+
+	return string(url), nil
 }

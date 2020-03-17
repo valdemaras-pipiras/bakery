@@ -13,6 +13,7 @@ func TestURLParseUrl(t *testing.T) {
 		input                string
 		expectedFilters      MediaFilters
 		expectedManifestPath string
+		expectedErr          bool
 	}{
 		{
 			"one video type",
@@ -23,6 +24,7 @@ func TestURLParseUrl(t *testing.T) {
 				MinBitrate: 0,
 			},
 			"/",
+			false,
 		},
 		{
 			"two video types",
@@ -33,6 +35,7 @@ func TestURLParseUrl(t *testing.T) {
 				MinBitrate: 0,
 			},
 			"/",
+			false,
 		},
 		{
 			"two video types and two audio types",
@@ -44,6 +47,7 @@ func TestURLParseUrl(t *testing.T) {
 				MinBitrate: 0,
 			},
 			"/",
+			false,
 		},
 		{
 			"videos, audio, captions and bitrate range",
@@ -57,6 +61,7 @@ func TestURLParseUrl(t *testing.T) {
 				MinBitrate:       100,
 			},
 			"/",
+			false,
 		},
 		{
 			"bitrate range with minimum bitrate only",
@@ -66,6 +71,7 @@ func TestURLParseUrl(t *testing.T) {
 				MinBitrate: 100,
 			},
 			"/",
+			false,
 		},
 		{
 			"bitrate range with maximum bitrate only",
@@ -75,6 +81,50 @@ func TestURLParseUrl(t *testing.T) {
 				MinBitrate: 0,
 			},
 			"/",
+			false,
+		},
+		{
+			"bitrate range with minimum greater than maximum throws error",
+			"/b(30000,3000)/",
+			MediaFilters{},
+			"",
+			true,
+		},
+		{
+			"bitrate range with minimum equal to maximum throws error",
+			"/b(3000,3000)/",
+			MediaFilters{},
+			"",
+			true,
+		},
+		{
+			"trim filter",
+			"/t(100,1000)/path/to/test.m3u8",
+			MediaFilters{
+				Protocol:   ProtocolHLS,
+				MaxBitrate: math.MaxInt32,
+				MinBitrate: 0,
+				Trim: &Trim{
+					Start: 100,
+					End:   1000,
+				},
+			},
+			"/path/to/test.m3u8",
+			false,
+		},
+		{
+			"trim filter where start time is greater than end time throws error",
+			"/t(10000,1000)/path/to/test.m3u8",
+			MediaFilters{},
+			"",
+			true,
+		},
+		{
+			"trim filter where start time and end time are equal throws error",
+			"/t(10000,1000)/path/to/test.m3u8",
+			MediaFilters{},
+			"",
+			true,
 		},
 		{
 			"detect a signle plugin for execution from url",
@@ -86,6 +136,7 @@ func TestURLParseUrl(t *testing.T) {
 				Plugins:    []string{"plugin1"},
 			},
 			"/some/path/master.m3u8",
+			false,
 		},
 		{
 			"detect plugins for execution from url",
@@ -98,6 +149,7 @@ func TestURLParseUrl(t *testing.T) {
 				Plugins:    []string{"plugin1", "plugin2", "plugin3"},
 			},
 			"/some/path/master.m3u8",
+			false,
 		},
 		{
 			"detect protocol hls for urls with .m3u8 extension",
@@ -108,6 +160,7 @@ func TestURLParseUrl(t *testing.T) {
 				MinBitrate: 0,
 			},
 			"/path/here/with/master.m3u8",
+			false,
 		},
 		{
 			"detect protocol dash for urls with .mpd extension",
@@ -118,6 +171,7 @@ func TestURLParseUrl(t *testing.T) {
 				MinBitrate: 0,
 			},
 			"/path/here/with/manifest.mpd",
+			false,
 		},
 		{
 			"detect filters for propeller channels and set path properly",
@@ -130,6 +184,7 @@ func TestURLParseUrl(t *testing.T) {
 				MinBitrate: 0,
 			},
 			"/propeller/orgID/master.m3u8",
+			false,
 		},
 		{
 			"set path properly for propeller channel with no filters",
@@ -140,14 +195,19 @@ func TestURLParseUrl(t *testing.T) {
 				MinBitrate: 0,
 			},
 			"/propeller/orgID/master.m3u8",
+			false,
 		},
 	}
 	for _, test := range tests {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
 			masterManifestPath, output, err := URLParse(test.input)
-			if err != nil {
-				t.Fatal(err)
+			if !test.expectedErr && err != nil {
+				t.Errorf("Did not expect an error returned, got: %v", err)
+				return
+			} else if test.expectedErr && err == nil {
+				t.Errorf("Expected an error returned, got nil")
+				return
 			}
 
 			jsonOutput, err := json.Marshal(output)

@@ -31,6 +31,7 @@ func NewPropeller(c config.Config, orgID string, channelID string) (*Propeller, 
 	if err != nil {
 		return &Propeller{}, fmt.Errorf("fetching propeller channel: %w", err)
 	}
+
 	return &Propeller{
 		URL:       propellerURL,
 		OrgID:     orgID,
@@ -41,7 +42,6 @@ func NewPropeller(c config.Config, orgID string, channelID string) (*Propeller, 
 func getPropellerChannelURL(host string, orgID string, channelID string) (string, error) {
 	pURL, err := url.Parse(host)
 	if err != nil {
-		fmt.Println(err)
 		return "", fmt.Errorf("parsing propeller host url: %w", err)
 	}
 	p := client.NewClient(pURL)

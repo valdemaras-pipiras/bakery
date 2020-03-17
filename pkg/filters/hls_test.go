@@ -1103,3 +1103,305 @@ http://existi\ng.base/uri/link_1.m3u8
 		})
 	}
 }
+
+func TestHLSFilter_FilterManifest_TrimFilter_MasterManifest(t *testing.T) {
+
+	masterManifestWithAbsoluteURLs := `#EXTM3U
+#EXT-X-VERSION:4
+#EXT-X-MEDIA:TYPE=CLOSED-CAPTIONS,GROUP-ID="CC",NAME="ENGLISH",DEFAULT=NO,LANGUAGE="ENG"
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=1000,AVERAGE-BANDWIDTH=1000,CODECS="avc1.64001f,mp4a.40.2"
+https://existing.base/path/link_1.m3u8
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4200,AVERAGE-BANDWIDTH=4200,CODECS="avc1.64001f,mp4a.40.2"
+https://existing.base/path/link_2.m3u8
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4000,AVERAGE-BANDWIDTH=4000,CODECS="avc1.64001f,mp4a.40.2"
+https://existing.base/path/link_4.m3u8
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4100,AVERAGE-BANDWIDTH=4100,CODECS="avc1.64001f,mp4a.40.2"
+https://existing.base/path/link_5.m3u8
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4500,AVERAGE-BANDWIDTH=4500,CODECS="avc1.64001f,mp4a.40.2"
+https://existing.base/path/link_6.m3u8
+`
+
+	masterManifestWithRelativeURLs := `#EXTM3U
+#EXT-X-VERSION:4
+#EXT-X-MEDIA:TYPE=CLOSED-CAPTIONS,GROUP-ID="CC",NAME="ENGLISH",DEFAULT=NO,LANGUAGE="ENG"
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=1000,AVERAGE-BANDWIDTH=1000,CODECS="avc1.64001f,mp4a.40.2"
+link_1.m3u8
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4200,AVERAGE-BANDWIDTH=4200,CODECS="avc1.64001f,mp4a.40.2"
+link_2.m3u8
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4000,AVERAGE-BANDWIDTH=4000,CODECS="avc1.64001f,mp4a.40.2"
+link_4.m3u8
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4100,AVERAGE-BANDWIDTH=4100,CODECS="avc1.64001f,mp4a.40.2"
+link_5.m3u8
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4500,AVERAGE-BANDWIDTH=4500,CODECS="avc1.64001f,mp4a.40.2"
+link_6.m3u8
+`
+
+	manifestWithBase64EncodedVariantURLS := `#EXTM3U
+#EXT-X-VERSION:4
+#EXT-X-MEDIA:TYPE=CLOSED-CAPTIONS,GROUP-ID="CC",NAME="ENGLISH",DEFAULT=NO,LANGUAGE="ENG"
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=1000,AVERAGE-BANDWIDTH=1000,CODECS="avc1.64001f,mp4a.40.2"
+https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua18xLm0zdTg.m3u8
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4200,AVERAGE-BANDWIDTH=4200,CODECS="avc1.64001f,mp4a.40.2"
+https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua18yLm0zdTg.m3u8
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4000,AVERAGE-BANDWIDTH=4000,CODECS="avc1.64001f,mp4a.40.2"
+https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua180Lm0zdTg.m3u8
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4100,AVERAGE-BANDWIDTH=4100,CODECS="avc1.64001f,mp4a.40.2"
+https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua181Lm0zdTg.m3u8
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4500,AVERAGE-BANDWIDTH=4500,CODECS="avc1.64001f,mp4a.40.2"
+https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua182Lm0zdTg.m3u8
+`
+
+	manifestWithFilteredBitrateAndBase64EncodedVariantURLS := `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4200,AVERAGE-BANDWIDTH=4200,CODECS="avc1.64001f,mp4a.40.2"
+https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua18yLm0zdTg.m3u8
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4000,AVERAGE-BANDWIDTH=4000,CODECS="avc1.64001f,mp4a.40.2"
+https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua180Lm0zdTg.m3u8
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4100,AVERAGE-BANDWIDTH=4100,CODECS="avc1.64001f,mp4a.40.2"
+https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua181Lm0zdTg.m3u8
+#EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4500,AVERAGE-BANDWIDTH=4500,CODECS="avc1.64001f,mp4a.40.2"
+https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua182Lm0zdTg.m3u8
+`
+
+	trim := &parsers.Trim{
+		Start: 10000,
+		End:   100000,
+	}
+
+	tests := []struct {
+		name                  string
+		filters               *parsers.MediaFilters
+		manifestContent       string
+		expectManifestContent string
+		expectErr             bool
+	}{
+		{
+			name: "when trim filter is given and master has absolute urls, variant level manifest will point to" +
+				"bakery with trim filter and base64 encoding string in the manifest",
+			filters:               &parsers.MediaFilters{Trim: trim},
+			manifestContent:       masterManifestWithAbsoluteURLs,
+			expectManifestContent: manifestWithBase64EncodedVariantURLS,
+		},
+		{
+			name: "when trim filter is given and master has relative urls, variant level manifest will point to" +
+				"bakery with trim filter and base64 encoding string in the manifest",
+			filters:               &parsers.MediaFilters{Trim: trim},
+			manifestContent:       masterManifestWithRelativeURLs,
+			expectManifestContent: manifestWithBase64EncodedVariantURLS,
+		},
+		{
+			name: "when bitrate and trim filter are given, variant level manifest will point to" +
+				"bakery with only included bitrates, the trim filter, and base64 encoding string in the manifest",
+			filters:               &parsers.MediaFilters{MinBitrate: 4000, MaxBitrate: 6000, Trim: trim},
+			manifestContent:       masterManifestWithRelativeURLs,
+			expectManifestContent: manifestWithFilteredBitrateAndBase64EncodedVariantURLS,
+		},
+		{
+			name:                  "when no filter is given, variant level manifest will hold absolute urls only",
+			filters:               &parsers.MediaFilters{},
+			manifestContent:       masterManifestWithRelativeURLs,
+			expectManifestContent: masterManifestWithAbsoluteURLs,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			filter := NewHLSFilter("https://existing.base/path/master.m3u8", tt.manifestContent, config.Config{Hostname: "bakery.cbsi.video"})
+			manifest, err := filter.FilterManifest(tt.filters)
+
+			if err != nil && !tt.expectErr {
+				t.Errorf("FilterManifest() didnt expect an error to be returned, got: %v", err)
+				return
+			} else if err == nil && tt.expectErr {
+				t.Error("FilterManifest() expected an error, got nil")
+				return
+			}
+
+			if g, e := manifest, tt.expectManifestContent; g != e {
+				t.Errorf("FilterManifest() wrong manifest returned)\ngot %v\nexpected: %v\ndiff: %v", g, e,
+					cmp.Diff(g, e))
+			}
+
+		})
+	}
+}
+
+func TestHLSFilter_FilterManifest_TrimFilter_VariantManifest(t *testing.T) {
+
+	variantManifestWithRelativeURLs := `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-MEDIA-SEQUENCE:10
+#EXT-X-TARGETDURATION:6
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:51:48Z
+#EXTINF:6.000,
+chan_1/chan_1_20200311T202743_1_00019.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:51:54Z
+#EXTINF:6.000,
+chan_1/chan_1_20200311T202748_1_00020.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:52:00Z
+#EXTINF:6.000,
+chan_1/chan_1_20200311T202754_1_00021.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:52:06Z
+#EXTINF:6.000,
+chan_1/chan_1_20200311T202801_1_00022.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:52:12Z
+#EXTINF:6.000,
+chan_1/chan_1_20200311T202806_1_00023.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:52:18Z
+#EXTINF:6.000,
+chan_1/chan_1_20200311T202813_1_00024.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:52:24Z
+#EXTINF:6.000,
+chan_1/chan_1_20200311T202818_1_00025.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:52:30Z
+#EXTINF:6.000,
+chan_1/chan_1_20200311T202824_1_00026.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:52:36Z
+#EXTINF:6.000,
+chan_1/chan_1_20200311T202818_1_00027.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:52:42Z
+#EXTINF:6.000,
+chan_1/chan_1_20200311T202824_1_00028.ts
+`
+
+	variantManifestWithAbsoluteURLs := `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-MEDIA-SEQUENCE:10
+#EXT-X-TARGETDURATION:6
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:51:48Z
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202743_1_00019.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:51:54Z
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202748_1_00020.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:52:00Z
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202754_1_00021.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:52:06Z
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202801_1_00022.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:52:12Z
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202806_1_00023.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:52:18Z
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202813_1_00024.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:52:24Z
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202818_1_00025.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:52:30Z
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202824_1_00026.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:52:36Z
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202818_1_00027.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:52:42Z
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202824_1_00028.ts
+`
+
+	variantManifestWithNoPDT := `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-MEDIA-SEQUENCE:10
+#EXT-X-TARGETDURATION:6
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202743_1_00019.ts
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202748_1_00020.ts
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202754_1_00021.ts
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202801_1_00022.ts
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202806_1_00023.ts
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202813_1_00024.ts
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202818_1_00025.ts
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202824_1_00026.ts
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202818_1_00027.ts
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202824_1_00028.ts
+`
+
+	variantManifestTrimmed := `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-TARGETDURATION:6
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:52:00Z
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202754_1_00021.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:52:06Z
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202801_1_00022.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:52:12Z
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202806_1_00023.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:52:18Z
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202813_1_00024.ts
+#EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:52:24Z
+#EXTINF:6.000,
+https://existing.base/path/chan_1/chan_1_20200311T202818_1_00025.ts
+#EXT-X-ENDLIST
+`
+
+	trim := &parsers.Trim{
+		Start: 1583887920, //2020-03-11T00:52:00
+		End:   1583887944, //2020-03-11T00:52:24
+	}
+
+	tests := []struct {
+		name                  string
+		filters               *parsers.MediaFilters
+		manifestContent       string
+		expectManifestContent string
+		expectErr             bool
+	}{
+		{
+			name: "when trim filter is given, variant level manifest have absolute url with base64" +
+				"encoding string in the manifest",
+			filters:               &parsers.MediaFilters{Trim: trim},
+			manifestContent:       variantManifestWithRelativeURLs,
+			expectManifestContent: variantManifestTrimmed,
+		},
+		{
+			name:                  "when no filter is given, variant level manifest will hold absolute urls only",
+			filters:               &parsers.MediaFilters{Trim: trim},
+			manifestContent:       variantManifestWithAbsoluteURLs,
+			expectManifestContent: variantManifestTrimmed,
+		},
+		{
+			name:                  "when no pdt present for segment, error is thrown",
+			filters:               &parsers.MediaFilters{Trim: trim},
+			manifestContent:       variantManifestWithNoPDT,
+			expectManifestContent: "",
+			expectErr:             true,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			filter := NewHLSFilter("https://existing.base/path/master.m3u8", tt.manifestContent, config.Config{Hostname: "bakery.cbsi.video"})
+			manifest, err := filter.FilterManifest(tt.filters)
+
+			if err != nil && !tt.expectErr {
+				t.Errorf("FilterManifest() didnt expect an error to be returned, got: %v", err)
+				return
+			} else if err == nil && tt.expectErr {
+				t.Error("FilterManifest() expected an error, got nil")
+				return
+			}
+
+			if g, e := manifest, tt.expectManifestContent; g != e {
+				t.Errorf("FilterManifest() wrong manifest returned)\ngot %v\nexpected: %v\ndiff: %v", g, e,
+					cmp.Diff(g, e))
+			}
+
+		})
+	}
+}

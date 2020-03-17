@@ -1,6 +1,7 @@
 package parsers
 
 import (
+	"fmt"
 	"math"
 	"path"
 	"regexp"
@@ -54,6 +55,12 @@ const (
 	ProtocolDASH Protocol = "dash"
 )
 
+// Trim is a struct that carries the start and end times to trim playlist
+type Trim struct {
+	Start int64 `json:",omitempty"`
+	End   int64 `json:",omitempty"`
+}
+
 // MediaFilters is a struct that carry all the information passed via url
 type MediaFilters struct {
 	Videos            []VideoType       `json:",omitempty"`
@@ -65,6 +72,7 @@ type MediaFilters struct {
 	MaxBitrate        int               `json:",omitempty"`
 	MinBitrate        int               `json:",omitempty"`
 	Plugins           []string          `json:",omitempty"`
+	Trim              *Trim             `json:",omitempty"`
 	Protocol          Protocol          `json:"protocol"`
 }
 
@@ -106,6 +114,7 @@ func URLParse(urlpath string) (string, *MediaFilters, error) {
 
 		filters := strings.Split(subparts[2], ",")
 
+		var err error
 		switch key := subparts[1]; key {
 		case "v":
 			for _, videoType := range filters {
@@ -142,16 +151,56 @@ func URLParse(urlpath string) (string, *MediaFilters, error) {
 			}
 		case "b":
 			if filters[0] != "" {
-				mf.MinBitrate, _ = strconv.Atoi(filters[0])
+				mf.MinBitrate, err = strconv.Atoi(filters[0])
+				if err != nil {
+					return keyError("trim", err)
+				}
 			}
 
 			if filters[1] != "" {
-				mf.MaxBitrate, _ = strconv.Atoi(filters[1])
+				mf.MaxBitrate, err = strconv.Atoi(filters[1])
+				if err != nil {
+					return keyError("trim", err)
+				}
 			}
+
+			if isGreater(mf.MinBitrate, mf.MaxBitrate) {
+				return keyError("bitrate", fmt.Errorf("Min Bitrate is greater than or equal to Max Bitrate"))
+			}
+		case "t":
+			var trim Trim
+			if filters[0] != "" {
+				trim.Start, err = strconv.ParseInt(filters[0], 10, 64)
+				if err != nil {
+					return keyError("trim", err)
+				}
+			}
+
+			if filters[1] != "" {
+				trim.End, err = strconv.ParseInt(filters[1], 10, 64)
+				if err != nil {
+					return keyError("trim", err)
+				}
+			}
+
+			if isGreater(int(trim.Start), int(trim.End)) {
+				return keyError("trim", fmt.Errorf("Start Time is greater than or equal to End Time"))
+			}
+
+			mf.Trim = &trim
 		}
 	}
 
 	return masterManifestPath, mf, nil
+}
+
+// validate ranges like Trim and Bitrate
+func isGreater(x int, y int) bool {
+	return x >= y
+}
+
+func keyError(key string, e error) (string, *MediaFilters, error) {
+	return "", &MediaFilters{}, fmt.Errorf("Error parsing filter key: %v. Got error: %w", key, e)
 }
 
 func (f *MediaFilters) filterPlugins(path string) bool {
