@@ -42,7 +42,6 @@ func NewHLSFilter(manifestURL, manifestContent string, c config.Config) *HLSFilt
 // FilterManifest will be responsible for filtering the manifest
 // according  to the MediaFilters
 func (h *HLSFilter) FilterManifest(filters *parsers.MediaFilters) (string, error) {
-	fmt.Println(h.manifestURL)
 	m, manifestType, err := m3u8.DecodeFrom(strings.NewReader(h.manifestContent), true)
 	if err != nil {
 		return "", err
