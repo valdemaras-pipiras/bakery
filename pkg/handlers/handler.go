@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/cbsinteractive/bakery/pkg/config"
@@ -68,25 +67,6 @@ func LoadHandler(c config.Config) http.Handler {
 		// write the filtered manifest to the response
 		fmt.Fprint(w, filteredManifest)
 	})
-}
-
-func fetchManifest(c config.Config, manifestURL string) (string, error) {
-	resp, err := c.Client.New().Get(manifestURL)
-	if err != nil {
-		return "", fmt.Errorf("fetching manifest: %w", err)
-	}
-	defer resp.Body.Close()
-
-	contents, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("reading manifest response body: %w", err)
-	}
-
-	if sc := resp.StatusCode; sc/100 > 3 {
-		return "", fmt.Errorf("fetching manifest: returning http status of %v", sc)
-	}
-
-	return string(contents), nil
 }
 
 func httpError(c config.Config, w http.ResponseWriter, err error, message string, code int) {

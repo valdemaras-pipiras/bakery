@@ -1,8 +1,10 @@
 package origin
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"strings"
 
 	"github.com/cbsinteractive/bakery/pkg/config"
@@ -17,28 +19,22 @@ type Origin interface {
 //Manifest struct holds Origin and Path of Manifest
 //Variant level manifests will be base64 encoded absolute path
 type Manifest struct {
-	Origin   string
-	Path     string
-	Absolute bool
+	Origin string
+	Path   url.URL
 }
 
 //Configure will return proper Origin interface
 func Configure(c config.Config, path string) (Origin, error) {
-	var renditionURL string
-
 	if strings.Contains(path, "propeller") {
 		parts := strings.Split(path, "/") //["", "propeller", "orgID", "channelID.m3u8"]
 		if len(parts) != 4 {
-			if len(parts) != 5 {
-				return &Propeller{}, fmt.Errorf("url path does not follow `/propeller/orgID/channelID.m3u8`")
-			}
-			renditionURL = parts[4] //base64.m3u8 is rendition level manifest
+			return &Propeller{}, fmt.Errorf("url path does not follow `/propeller/orgID/channelID.m3u8`")
 		}
 
 		orgID := parts[2]
 		channelID := strings.Split(parts[3], ".")[0] // split off .m3u8
 
-		o, err := NewPropeller(c, orgID, channelID, renditionURL)
+		o, err := NewPropeller(c, orgID, channelID)
 		if err != nil {
 			return &Propeller{}, fmt.Errorf("configuring propeller origin: %w", err)
 		}
@@ -56,36 +52,29 @@ func Configure(c config.Config, path string) (Origin, error) {
 		path = renditionURL
 	}
 
-	return NewManifest(c, path), nil
+	return NewManifest(c, path)
 }
 
 //NewManifest returns a new Origin struct
-func NewManifest(c config.Config, path string) *Manifest {
-	var absolute bool
-	if strings.Contains(path, "http") {
-		absolute = true
+func NewManifest(c config.Config, p string) (*Manifest, error) {
+	u, err := url.Parse(p)
+	if err != nil {
+		return &Manifest{}, nil
 	}
 
 	return &Manifest{
-		Origin:   c.OriginHost,
-		Path:     path,
-		Absolute: absolute,
-	}
+		Origin: c.OriginHost,
+		Path:   *u,
+	}, nil
 }
 
 //GetPlaybackURL will retrieve url
 func (m *Manifest) GetPlaybackURL() string {
-	if m.Absolute {
-		return m.Path
+	if m.Path.IsAbs() {
+		return m.Path.String()
 	}
 
-	return m.Origin + m.Path
-}
-
-//GetPath will return Path to manifest
-func (m *Manifest) GetPath() string {
-	path := strings.Split(m.Path, ".")[0] + "/"
-	return path
+	return m.Origin + m.Path.String()
 }
 
 //FetchManifest will grab manifest contents of configured origin
@@ -110,4 +99,14 @@ func fetch(c config.Config, manifestURL string) (string, error) {
 	}
 
 	return string(contents), nil
+}
+
+func decodeRenditionURL(rendition string) (string, error) {
+	rendition = strings.TrimSuffix(rendition, ".m3u8")
+	url, err := base64.RawURLEncoding.DecodeString(rendition)
+	if err != nil {
+		return "", fmt.Errorf("decoding rendition: %w", err)
+	}
+
+	return string(url), nil
 }

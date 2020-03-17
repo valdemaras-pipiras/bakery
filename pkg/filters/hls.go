@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/cbsinteractive/bakery/pkg/config"
 	"github.com/cbsinteractive/bakery/pkg/parsers"
@@ -41,6 +42,7 @@ func NewHLSFilter(manifestURL, manifestContent string, c config.Config) *HLSFilt
 // FilterManifest will be responsible for filtering the manifest
 // according  to the MediaFilters
 func (h *HLSFilter) FilterManifest(filters *parsers.MediaFilters) (string, error) {
+	fmt.Println(h.manifestURL)
 	m, manifestType, err := m3u8.DecodeFrom(strings.NewReader(h.manifestContent), true)
 	if err != nil {
 		return "", err
@@ -55,8 +57,7 @@ func (h *HLSFilter) FilterManifest(filters *parsers.MediaFilters) (string, error
 	filteredManifest := m3u8.NewMasterPlaylist()
 
 	for _, v := range manifest.Variants {
-		absoluteURL, _ := filepath.Split(h.manifestURL)
-		absolute, aErr := url.Parse(absoluteURL)
+		absolute, aErr := getAbsoluteURL(h.manifestURL)
 		if aErr != nil {
 			return h.manifestContent, aErr
 		}
@@ -187,7 +188,7 @@ func (h *HLSFilter) normalizeVariant(v *m3u8.Variant, absolute url.URL) (*m3u8.V
 }
 
 func (h *HLSFilter) normalizeTrimmedVariant(filters *parsers.MediaFilters, uri string) (string, error) {
-	encoded := base64.StdEncoding.EncodeToString([]byte(uri))
+	encoded := base64.RawURLEncoding.EncodeToString([]byte(uri))
 	start := filters.Trim.Start
 	end := filters.Trim.End
 	u, err := url.Parse(uri)
@@ -227,37 +228,38 @@ func isRelative(urlStr string) (bool, error) {
 // FilterRenditionManifest will be responsible for filtering the manifest
 // according  to the MediaFilters
 func (h *HLSFilter) filterRenditionManifest(filters *parsers.MediaFilters, m *m3u8.MediaPlaylist) (string, error) {
-	filteredPlaylist, _ := m3u8.NewMediaPlaylist(uint(len(m.Segments)), uint(len(m.Segments)))
-	seqID := 0
+	filteredPlaylist, err := m3u8.NewMediaPlaylist(m.Count(), m.Count())
+	if err != nil {
+		return "", fmt.Errorf("filtering Rendition Manifest: %w", err)
+	}
 
 	for _, segment := range m.Segments {
-		if segment != nil {
-			if inRange(int64(filters.Trim.Start), int64(filters.Trim.End), segment.ProgramDateTime.Unix()) {
-				isRelativeURL, err := isRelative(segment.URI)
-				if err != nil {
-					return "", fmt.Errorf("trimming segments: %w", err)
-				}
+		if segment == nil {
+			continue
+		}
 
-				if isRelativeURL {
-					absolute, err := getAbsoluteURLString(h.manifestURL)
-					if err != nil {
-						return "", fmt.Errorf("fetching absolute url: %w", err)
-					}
+		if segment.ProgramDateTime == (time.Time{}) {
+			return "", fmt.Errorf("Program Date Time not set on segments")
+		}
 
-					segment.URI = absolute + segment.URI
-				}
+		if inRange(filters.Trim.Start, filters.Trim.End, segment.ProgramDateTime.Unix()) {
+			absolute, err := getAbsoluteURL(h.manifestURL)
+			if err != nil {
+				return "", fmt.Errorf("formatting segment URLs: %w", err)
+			}
 
-				err = filteredPlaylist.AppendSegment(segment)
-				if err != nil {
-					return "", fmt.Errorf("trimming segments: %w", err)
-				}
+			segment.URI, err = combinedIfRelative(segment.URI, *absolute)
+			if err != nil {
+				return "", fmt.Errorf("formatting segment URLs: %w", err)
+			}
 
-				seqID++
+			err = filteredPlaylist.AppendSegment(segment)
+			if err != nil {
+				return "", fmt.Errorf("trimming segments: %w", err)
 			}
 		}
 	}
 
-	filteredPlaylist.SeqNo = uint64(seqID)
 	filteredPlaylist.Close()
 
 	return filteredPlaylist.Encode().String(), nil
@@ -268,12 +270,7 @@ func inRange(start int64, end int64, value int64) bool {
 }
 
 //Returns absolute url of given manifest as a string
-func getAbsoluteURLString(path string) (string, error) {
+func getAbsoluteURL(path string) (*url.URL, error) {
 	absoluteURL, _ := filepath.Split(path)
-	absolute, aErr := url.Parse(absoluteURL)
-	if aErr != nil {
-		return path, aErr
-	}
-
-	return absolute.String(), nil
+	return url.Parse(absoluteURL)
 }
