@@ -1140,27 +1140,27 @@ link_6.m3u8
 #EXT-X-VERSION:4
 #EXT-X-MEDIA:TYPE=CLOSED-CAPTIONS,GROUP-ID="CC",NAME="ENGLISH",DEFAULT=NO,LANGUAGE="ENG"
 #EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=1000,AVERAGE-BANDWIDTH=1000,CODECS="avc1.64001f,mp4a.40.2"
-https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua18xLm0zdTg=.m3u8
+https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua18xLm0zdTg.m3u8
 #EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4200,AVERAGE-BANDWIDTH=4200,CODECS="avc1.64001f,mp4a.40.2"
-https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua18yLm0zdTg=.m3u8
+https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua18yLm0zdTg.m3u8
 #EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4000,AVERAGE-BANDWIDTH=4000,CODECS="avc1.64001f,mp4a.40.2"
-https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua180Lm0zdTg=.m3u8
+https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua180Lm0zdTg.m3u8
 #EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4100,AVERAGE-BANDWIDTH=4100,CODECS="avc1.64001f,mp4a.40.2"
-https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua181Lm0zdTg=.m3u8
+https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua181Lm0zdTg.m3u8
 #EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4500,AVERAGE-BANDWIDTH=4500,CODECS="avc1.64001f,mp4a.40.2"
-https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua182Lm0zdTg=.m3u8
+https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua182Lm0zdTg.m3u8
 `
 
 	manifestWithFilteredBitrateAndBase64EncodedVariantURLS := `#EXTM3U
 #EXT-X-VERSION:3
 #EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4200,AVERAGE-BANDWIDTH=4200,CODECS="avc1.64001f,mp4a.40.2"
-https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua18yLm0zdTg=.m3u8
+https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua18yLm0zdTg.m3u8
 #EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4000,AVERAGE-BANDWIDTH=4000,CODECS="avc1.64001f,mp4a.40.2"
-https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua180Lm0zdTg=.m3u8
+https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua180Lm0zdTg.m3u8
 #EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4100,AVERAGE-BANDWIDTH=4100,CODECS="avc1.64001f,mp4a.40.2"
-https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua181Lm0zdTg=.m3u8
+https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua181Lm0zdTg.m3u8
 #EXT-X-STREAM-INF:PROGRAM-ID=0,BANDWIDTH=4500,AVERAGE-BANDWIDTH=4500,CODECS="avc1.64001f,mp4a.40.2"
-https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua182Lm0zdTg=.m3u8
+https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbGlua182Lm0zdTg.m3u8
 `
 
 	trim := &parsers.Trim{
@@ -1303,7 +1303,7 @@ https://existing.base/path/chan_1/chan_1_20200311T202824_1_00028.ts
 
 	variantManifestTrimmed := `#EXTM3U
 #EXT-X-VERSION:3
-#EXT-X-MEDIA-SEQUENCE:5
+#EXT-X-MEDIA-SEQUENCE:0
 #EXT-X-TARGETDURATION:6
 #EXT-X-PROGRAM-DATE-TIME:2020-03-11T00:52:00Z
 #EXTINF:6.000,
