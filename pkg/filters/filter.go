@@ -1,6 +1,7 @@
 package filters
 
 import (
+	"fmt"
 	"math"
 	"strings"
 
@@ -60,40 +61,35 @@ func isCaptionCodec(codec string) bool {
 		ValidCodecs(codec, wvttCodec))
 }
 
-// ValidBitrateRange returns true if the specified min and max bitrates create a valid range
-func ValidBitrateRange(minBitrate int, maxBitrate int) bool {
-	return (minBitrate >= 0 && maxBitrate <= math.MaxInt32) &&
-		(minBitrate < maxBitrate) &&
-		!(minBitrate == 0 && maxBitrate == math.MaxInt32)
+// isDefault returns true if the specified min and max bitrates are equal to their defaults
+func IsDefault(minBitrate int, maxBitrate int) bool {
+	return minBitrate == 0 && maxBitrate == math.MaxInt32
 }
 
 // DefinesBitrateFilter returns true if a bitrate filter should be applied. This means that
 // at least one of the overall, audio, and video bitrate filters are valid and not the default range.
 // It also sets audio/video subfilters ito be in range of the overall bitrate filters
 func DefinesBitrateFilter(f *parsers.MediaFilters) bool {
-	overall := ValidBitrateRange(f.MinBitrate, f.MaxBitrate)
-	audio := ValidBitrateRange(f.AudioFilters.MinBitrate, f.AudioFilters.MaxBitrate)
-	video := ValidBitrateRange(f.VideoFilters.MinBitrate, f.VideoFilters.MaxBitrate)
-	if overall {
-		// if audio or video subfilters do not overlap with overall bitrate filters, set them equal to overall
-		if audio && (f.AudioFilters.MinBitrate > f.MaxBitrate || f.AudioFilters.MaxBitrate < f.MinBitrate) {
-			f.AudioFilters.MinBitrate = f.MinBitrate
-			f.AudioFilters.MaxBitrate = f.MaxBitrate
-		} else if video && (f.VideoFilters.MinBitrate > f.MaxBitrate || f.VideoFilters.MaxBitrate < f.MinBitrate) {
-			f.VideoFilters.MinBitrate = f.MinBitrate
-			f.VideoFilters.MaxBitrate = f.MaxBitrate
-		} else {
-			// otherwise, adjust minBitrate and maxBitrate so that they are in range of overall bitrate
-			// while still maintaining the original min/maxBitrate if that was already in range
-			f.AudioFilters.MinBitrate = max(f.AudioFilters.MinBitrate, f.MinBitrate)
-			f.AudioFilters.MaxBitrate = min(f.AudioFilters.MaxBitrate, f.MaxBitrate)
-			f.VideoFilters.MinBitrate = max(f.VideoFilters.MinBitrate, f.MinBitrate)
-			f.VideoFilters.MaxBitrate = min(f.VideoFilters.MaxBitrate, f.MaxBitrate)
-		}
-		return true
+	fmt.Printf("overall: %v, %v\naudio: %v, %v\nvideo: %v, %v", f.MinBitrate, f.MaxBitrate, f.AudioFilters.MinBitrate, f.AudioFilters.MaxBitrate, f.VideoFilters.MinBitrate, f.VideoFilters.MaxBitrate)
+	// if audio or video subfilters do not overlap with overall bitrate filters, set them equal to overall
+	if f.AudioFilters.MinBitrate > f.MaxBitrate || f.AudioFilters.MaxBitrate < f.MinBitrate {
+		f.AudioFilters.MinBitrate = f.MinBitrate
+		f.AudioFilters.MaxBitrate = f.MaxBitrate
+	} else if f.VideoFilters.MinBitrate > f.MaxBitrate || f.VideoFilters.MaxBitrate < f.MinBitrate {
+		f.VideoFilters.MinBitrate = f.MinBitrate
+		f.VideoFilters.MaxBitrate = f.MaxBitrate
 	} else {
-		return audio || video
+		// if audio or video subfilters DO overlap with overall, set min/max to be in bounds of overall
+		f.AudioFilters.MinBitrate = max(f.AudioFilters.MinBitrate, f.MinBitrate)
+		f.AudioFilters.MaxBitrate = min(f.AudioFilters.MaxBitrate, f.MaxBitrate)
+		f.VideoFilters.MinBitrate = max(f.VideoFilters.MinBitrate, f.MinBitrate)
+		f.VideoFilters.MaxBitrate = min(f.VideoFilters.MaxBitrate, f.MaxBitrate)
 	}
+
+	overall := IsDefault(f.MinBitrate, f.MaxBitrate)
+	audio := IsDefault(f.AudioFilters.MinBitrate, f.AudioFilters.MaxBitrate)
+	video := IsDefault(f.VideoFilters.MinBitrate, f.VideoFilters.MaxBitrate)
+	return !(overall && audio && video)
 }
 
 // max returns the larger of int a and int b

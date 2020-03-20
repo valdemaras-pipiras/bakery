@@ -137,12 +137,18 @@ func URLParse(urlpath string) (string, *MediaFilters, error) {
 		switch key := subparts[1]; key {
 		case "v":
 			for _, sf := range subfilters {
-				mf.findSubfilters(sf, StreamType("video"))
+				result, filter, err := mf.findSubfilters(sf, StreamType("video"))
+				if err != nil {
+					return result, filter, err
+				}
 			}
 
 		case "a":
 			for _, sf := range subfilters {
-				mf.findSubfilters(sf, StreamType("audio"))
+				result, filter, err := mf.findSubfilters(sf, StreamType("audio"))
+				if err != nil {
+					return result, filter, err
+				}
 			}
 
 		case "al":
@@ -169,19 +175,19 @@ func URLParse(urlpath string) (string, *MediaFilters, error) {
 			if filters[0] != "" {
 				mf.MinBitrate, err = strconv.Atoi(filters[0])
 				if err != nil {
-					return keyError("trim", err)
+					return keyError("MinBitrate", err)
 				}
 			}
 
 			if filters[1] != "" {
 				mf.MaxBitrate, err = strconv.Atoi(filters[1])
 				if err != nil {
-					return keyError("trim", err)
+					return keyError("MaxBitrate", err)
 				}
 			}
 
 			if isGreater(mf.MinBitrate, mf.MaxBitrate) {
-				return keyError("bitrate", fmt.Errorf("Min Bitrate is greater than or equal to Max Bitrate"))
+				return keyError("bitrate", fmt.Errorf("MinBitrate is greater than or equal to MaxBitrate"))
 			}
 		case "t":
 			var trim Trim
@@ -232,7 +238,7 @@ func (f *MediaFilters) filterPlugins(path string) bool {
 	return false
 }
 
-func (mf *MediaFilters) findSubfilters(subfilter string, streamType StreamType) {
+func (mf *MediaFilters) findSubfilters(subfilter string, streamType StreamType) (string, *MediaFilters, error) {
 	// assumes nested filters are properly formatted
 	splitSubfilter := urlParseRegexp.FindStringSubmatch(subfilter)
 	var key string
@@ -249,7 +255,10 @@ func (mf *MediaFilters) findSubfilters(subfilter string, streamType StreamType) 
 	// as in such a situation, key = codec,codec,b
 	splitKey := strings.Split(key, ",")
 	if len(splitKey) == 1 {
-		mf.normalizeSubfilter(streamType, key, param)
+		result, filter, err := mf.normalizeSubfilter(streamType, key, param)
+		if err != nil {
+			return result, filter, err
+		}
 	} else {
 		var keys []string
 		var params [][]string
@@ -264,9 +273,14 @@ func (mf *MediaFilters) findSubfilters(subfilter string, streamType StreamType) 
 		}
 
 		for i, _ := range keys {
-			mf.normalizeSubfilter(streamType, keys[i], params[i])
+			result, filter, err := mf.normalizeSubfilter(streamType, keys[i], params[i])
+			if err != nil {
+				return result, filter, err
+			}
 		}
 	}
+
+	return "", mf, nil
 }
 
 // Initialize bitrate range for overall, audio, and video bitrate filters to 0, math.MaxInt32
@@ -296,13 +310,14 @@ func SplitAfter(s string, re *regexp.Regexp) []string {
 }
 
 // normalizeSubfilter takes a subfilter and sets AudiFilters' or VideoSubFilters' values accordingly.
-func (f *MediaFilters) normalizeSubfilter(streamType StreamType, key string, values []string) {
+func (mf *MediaFilters) normalizeSubfilter(streamType StreamType, key string, values []string) (string, *MediaFilters, error) {
 	var streamSubfilters *Subfilters
+	var err error
 	switch streamType {
 	case "audio":
-		streamSubfilters = &f.AudioFilters
+		streamSubfilters = &mf.AudioFilters
 	case "video":
-		streamSubfilters = &f.VideoFilters
+		streamSubfilters = &mf.VideoFilters
 	}
 
 	switch key {
@@ -316,11 +331,29 @@ func (f *MediaFilters) normalizeSubfilter(streamType StreamType, key string, val
 		}
 	case "b":
 		if values[0] != "" {
-			streamSubfilters.MinBitrate, _ = strconv.Atoi(values[0])
+			streamSubfilters.MinBitrate, err = strconv.Atoi(values[0])
+			if err != nil {
+				return keyError("MinBitrate", err)
+			}
+			if streamSubfilters.MinBitrate < 0 || streamSubfilters.MinBitrate > math.MaxInt32 {
+				return keyError("MaxBitrate", fmt.Errorf("MinBitrate is negative or exceeds math.MaxInt32"))
+			}
 		}
 
 		if values[1] != "" {
-			streamSubfilters.MaxBitrate, _ = strconv.Atoi(values[1])
+			streamSubfilters.MaxBitrate, err = strconv.Atoi(values[1])
+			if err != nil {
+				return keyError("MaxBitrate", err)
+			}
+			if streamSubfilters.MaxBitrate < 0 || streamSubfilters.MaxBitrate > math.MaxInt32 {
+				return keyError("MaxBitrate", fmt.Errorf("MaxBitrate is negative or exceeds math.MaxInt32"))
+			}
+		}
+
+		if isGreater(streamSubfilters.MinBitrate, streamSubfilters.MaxBitrate) {
+			return keyError((string(streamType) + "bitrate"), fmt.Errorf("MinBitrate is greater than or equal to MaxBitrate"))
 		}
 	}
+
+	return "", mf, nil
 }

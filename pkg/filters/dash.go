@@ -234,7 +234,7 @@ func (d *DASHFilter) filterBandwidth(filters *parsers.MediaFilters, manifest *mp
 			}
 
 			// if the subfilter in the adaptation set applies to the content type of the adaptation set
-			if subfilter != nil && ValidBitrateRange(subfilter.MinBitrate, subfilter.MaxBitrate) {
+			if subfilter != nil && !IsDefault(subfilter.MinBitrate, subfilter.MaxBitrate) {
 				lowerBitrate = int64(subfilter.MinBitrate)
 				upperBitrate = int64(subfilter.MaxBitrate)
 			} else {

@@ -134,6 +134,48 @@ func TestURLParseUrl(t *testing.T) {
 			true,
 		},
 		{
+			"audio bitrate range with minimum equal to maximum throws error",
+			"/a(b(1000,1000))/",
+			MediaFilters{},
+			"",
+			true,
+		},
+		{
+			"video bitrate range with minimum greater than maximum throws error",
+			"/v(b(2000,1000))/",
+			MediaFilters{},
+			"",
+			true,
+		},
+		{
+			"audio bitrate range with inavlid, negative minimum",
+			"/a(b(-100,1000))/",
+			MediaFilters{},
+			"",
+			true,
+		},
+		{
+			"video bitrate range with invalid, greater than math.MaxInt32 minimum",
+			"/v(b(2147483648))/",
+			MediaFilters{},
+			"",
+			true,
+		},
+		{
+			"audio bitrate range with invalid, greater than math.MaxInt32 maximum",
+			"/a(b(10,2147483648))/",
+			MediaFilters{},
+			"",
+			true,
+		},
+		{
+			"video bitrate range with invalid, negative maximum",
+			"/v(b(10,-100))/",
+			MediaFilters{},
+			"",
+			true,
+		},
+		{
 			"trim filter",
 			"/t(100,1000)/path/to/test.m3u8",
 			MediaFilters{
