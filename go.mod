@@ -7,7 +7,7 @@ go 1.13
 require (
 	github.com/akrylysov/algnhsa v0.12.1
 	github.com/aws/aws-lambda-go v1.15.0 // indirect
-	github.com/cbsinteractive/propeller-client-go v0.0.0-20200310001146-17ec5e73de5d
+	github.com/cbsinteractive/propeller-client-go v0.0.0-20200320001501-6150907a52b8
 	github.com/google/go-cmp v0.4.0
 	github.com/grafov/m3u8 v0.11.1
 	github.com/kelseyhightower/envconfig v1.4.0
