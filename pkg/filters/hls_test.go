@@ -1465,7 +1465,17 @@ https://bakery.cbsi.video/t(10000,100000)/aHR0cHM6Ly9leGlzdGluZy5iYXNlL3BhdGgvbG
 		{
 			name: "when bitrate and trim filter are given, variant level manifest will point to" +
 				"bakery with only included bitrates, the trim filter, and base64 encoding string in the manifest",
-			filters:               &parsers.MediaFilters{MinBitrate: 4000, MaxBitrate: 6000, Trim: trim},
+			filters: &parsers.MediaFilters{
+				MinBitrate: 4000,
+				MaxBitrate: 6000,
+				Trim:       trim,
+				VideoFilters: parsers.Subfilters{
+					MaxBitrate: math.MaxInt32,
+				},
+				AudioFilters: parsers.Subfilters{
+					MaxBitrate: math.MaxInt32,
+				},
+			},
 			manifestContent:       masterManifestWithRelativeURLs,
 			expectManifestContent: manifestWithFilteredBitrateAndBase64EncodedVariantURLS,
 		},
