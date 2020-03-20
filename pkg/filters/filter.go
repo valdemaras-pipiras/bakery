@@ -58,7 +58,8 @@ func isVideoCodec(codec string) bool {
 func isCaptionCodec(codec string) bool {
 	return (ValidCodecs(codec, stppCodec) ||
 		ValidCodecs(codec, wvttCodec))
-		
+}
+
 // ValidBitrateRange returns true if the specified min and max bitrates create a valid range
 func ValidBitrateRange(minBitrate int, maxBitrate int) bool {
 	return (minBitrate >= 0 && maxBitrate <= math.MaxInt32) &&

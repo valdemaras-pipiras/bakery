@@ -109,6 +109,12 @@ func TestURLParseUrl(t *testing.T) {
 			MediaFilters{
 				MaxBitrate: 3000,
 				MinBitrate: 0,
+				VideoFilters: Subfilters{
+					MaxBitrate: math.MaxInt32,
+				},
+				AudioFilters: Subfilters{
+					MaxBitrate: math.MaxInt32,
+				},
 			},
 			"/",
 			false,
@@ -138,6 +144,12 @@ func TestURLParseUrl(t *testing.T) {
 					Start: 100,
 					End:   1000,
 				},
+				VideoFilters: Subfilters{
+					MaxBitrate: math.MaxInt32,
+				},
+				AudioFilters: Subfilters{
+					MaxBitrate: math.MaxInt32,
+				},
 			},
 			"/path/to/test.m3u8",
 			false,
@@ -164,6 +176,12 @@ func TestURLParseUrl(t *testing.T) {
 				MinBitrate: 0,
 				Protocol:   ProtocolHLS,
 				Plugins:    []string{"plugin1"},
+				VideoFilters: Subfilters{
+					MaxBitrate: math.MaxInt32,
+				},
+				AudioFilters: Subfilters{
+					MaxBitrate: math.MaxInt32,
+				},
 			},
 			"/some/path/master.m3u8",
 			false,
@@ -172,40 +190,20 @@ func TestURLParseUrl(t *testing.T) {
 			"detect plugins for execution from url",
 			"/v(hdr10,hevc)/[plugin1,plugin2,plugin3]/some/path/master.m3u8",
 			MediaFilters{
-				Videos:     []VideoType{"hev1.2", "hvc1.2", videoHEVC},
 				MaxBitrate: math.MaxInt32,
 				MinBitrate: 0,
-				Protocol:   ProtocolHLS,
-				Plugins:    []string{"plugin1", "plugin2", "plugin3"},
-			},
-			"/some/path/master.m3u8",
-			false,
-		},
-		{
-			"bitrate range and audio specifier",
-			"/b(audio,0,1000)",
-			MediaFilters{
-				FilterBitrateTypes: []StreamType{"audio"},
-				MinBitrate:         0,
-				MaxBitrate:         1000,
-			},
-			"/",
-		},
-		{
-			"bitrate range and audio and video specifiers",
-			"/b(audio,video,0,1000)",
-			MediaFilters{
-				FilterBitrateTypes: []StreamType{"audio", "video"},
-				MinBitrate:         0,
-				MaxBitrate:         1000,
-				VideoSubFilters: Subfilters{
+				VideoFilters: Subfilters{
+					Codecs:     []Codec{"hev1.2", "hvc1.2", codecHEVC},
 					MaxBitrate: math.MaxInt32,
 				},
 				AudioFilters: Subfilters{
 					MaxBitrate: math.MaxInt32,
 				},
+				Protocol: ProtocolHLS,
+				Plugins:  []string{"plugin1", "plugin2", "plugin3"},
 			},
-			"/",
+			"/some/path/master.m3u8",
+			false,
 		},
 		{
 			"nested audio and video bitrate filters",
@@ -222,6 +220,7 @@ func TestURLParseUrl(t *testing.T) {
 				},
 			},
 			"/",
+			false,
 		},
 		{
 			"nested codec and bitrate filters in audio",
@@ -239,6 +238,7 @@ func TestURLParseUrl(t *testing.T) {
 				},
 			},
 			"/",
+			false,
 		},
 		{
 			"nested codec and bitrate filters in video, plus overall bitrate filters",
@@ -256,6 +256,7 @@ func TestURLParseUrl(t *testing.T) {
 				},
 			},
 			"/",
+			false,
 		},
 		{
 			"nested bitrate and old format of codec filter",
@@ -272,6 +273,7 @@ func TestURLParseUrl(t *testing.T) {
 				},
 			},
 			"/",
+			false,
 		},
 		{
 			"detect protocol hls for urls with .m3u8 extension",

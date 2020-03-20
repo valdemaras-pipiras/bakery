@@ -1,6 +1,7 @@
 package parsers
 
 import (
+	"fmt"
 	"math"
 	"path"
 	"regexp"
@@ -73,18 +74,17 @@ type Trim struct {
 
 // MediaFilters is a struct that carry all the information passed via url
 type MediaFilters struct {
-	VideoFilters       Subfilters        `json:",omitempty"`
-	AudioFilters       Subfilters        `json:",omitempty"`
-	AudioLanguages     []AudioLanguage   `json:",omitempty"`
-	CaptionLanguages   []CaptionLanguage `json:",omitempty"`
-	CaptionTypes       []CaptionType     `json:",omitempty"`
-	FilterStreamTypes  []StreamType      `json:",omitempty"`
-	FilterBitrateTypes []StreamType      `json:",omitempty"`
-	MaxBitrate         int               `json:",omitempty"`
-	MinBitrate         int               `json:",omitempty"`
+	VideoFilters      Subfilters        `json:",omitempty"`
+	AudioFilters      Subfilters        `json:",omitempty"`
+	AudioLanguages    []AudioLanguage   `json:",omitempty"`
+	CaptionLanguages  []CaptionLanguage `json:",omitempty"`
+	CaptionTypes      []CaptionType     `json:",omitempty"`
+	FilterStreamTypes []StreamType      `json:",omitempty"`
+	MaxBitrate        int               `json:",omitempty"`
+	MinBitrate        int               `json:",omitempty"`
 	Plugins           []string          `json:",omitempty"`
 	Trim              *Trim             `json:",omitempty"`
-	Protocol           Protocol          `json:"protocol"`
+	Protocol          Protocol          `json:"protocol"`
 }
 
 type Subfilters struct {
@@ -201,7 +201,7 @@ func URLParse(urlpath string) (string, *MediaFilters, error) {
 
 			if isGreater(int(trim.Start), int(trim.End)) {
 				return keyError("trim", fmt.Errorf("Start Time is greater than or equal to End Time"))
-
+			}
 			mf.Trim = &trim
 		}
 	}
@@ -230,24 +230,6 @@ func (f *MediaFilters) filterPlugins(path string) bool {
 	}
 
 	return false
-}
-
-//DefinesBitrateFilter will check if bitrate filter is set
-func (f *MediaFilters) DefinesBitrateFilter() bool {
-	return (f.MinBitrate >= 0 && f.MaxBitrate <= math.MaxInt32) &&
-		(f.MinBitrate < f.MaxBitrate) &&
-		!(f.MinBitrate == 0 && f.MaxBitrate == math.MaxInt32)
-}
-
-func (f *Subfilters) BitrateSubfilterApplies() bool {
-	return f.MinBitrate != 0 || f.MaxBitrate != math.MaxInt32
-}
-
-func (f *MediaFilters) BitrateFilterApplies() bool {
-	overall := f.DefinesBitrateFilter()
-	audio := f.AudioSubFilters.BitrateSubfilterApplies()
-	video := f.VideoSubFilters.BitrateSubfilterApplies()
-	return overall || audio || video
 }
 
 func (mf *MediaFilters) findSubfilters(subfilter string, streamType StreamType) {

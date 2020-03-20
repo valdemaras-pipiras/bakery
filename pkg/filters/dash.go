@@ -77,11 +77,11 @@ func (d *DASHFilter) getFilters(filters *parsers.MediaFilters) []execFilter {
 		filterList = append(filterList, d.filterAdaptationSetType)
 	}
 
-	if filters.DefinesBitrateFilter() {
+	if DefinesBitrateFilter(filters) {
 		filterList = append(filterList, d.filterBandwidth)
 	}
 
-	if filters.Videos != nil {
+	if filters.VideoFilters.Codecs != nil {
 		filterList = append(filterList, d.filterVideoTypes)
 	}
 
@@ -216,44 +216,43 @@ func (d *DASHFilter) filterBandwidth(filters *parsers.MediaFilters, manifest *mp
 		var filteredAdaptationSets []*mpd.AdaptationSet
 		for _, as := range period.AdaptationSets {
 			var filteredRepresentations []*mpd.Representation
-			if as.ContentType != nil {
+			if as.ContentType == nil {
+				continue
+			}
+			var lowerBitrate int64
+			var upperBitrate int64
+			var subfilter *parsers.Subfilters
 
-				var lowerBitrate int64
-				var upperBitrate int64
-				var subfilter *parsers.Subfilters
+			// set subfilter equivalent to the subfilter of the adaptation set's content type
+			switch *as.ContentType {
+			case string(audioContentType):
+				subfilter = &filters.AudioFilters
+			case string(videoContentType):
+				subfilter = &filters.VideoFilters
+			default:
+				subfilter = nil
+			}
 
-				// set subfilter equivalent to the subfilter of the adaptation set's content type
-				switch *as.ContentType {
-				case string(audioContentType):
-					subfilter = &filters.AudioFilters
-				case string(videoContentType):
-					subfilter = &filters.VideoFilters
-				default:
-					subfilter = nil
+			// if the subfilter in the adaptation set applies to the content type of the adaptation set
+			if subfilter != nil && ValidBitrateRange(subfilter.MinBitrate, subfilter.MaxBitrate) {
+				lowerBitrate = int64(subfilter.MinBitrate)
+				upperBitrate = int64(subfilter.MaxBitrate)
+			} else {
+				lowerBitrate = int64(filters.MinBitrate)
+				upperBitrate = int64(filters.MaxBitrate)
+			}
+
+			for _, r := range as.Representations {
+				if r.Bandwidth == nil {
+					continue
 				}
-
-				// if the subfilter in the adaptation set applies to the content type of the adaptation set
-				if subfilter != nil && ValidBitrateRange(subfilter.MinBitrate, subfilter.MaxBitrate) {
-					lowerBitrate = int64(subfilter.MinBitrate)
-					upperBitrate = int64(subfilter.MaxBitrate)
-				} else {
-					lowerBitrate = int64(filters.MinBitrate)
-					upperBitrate = int64(filters.MaxBitrate)
+				if *r.Bandwidth <= upperBitrate && *r.Bandwidth >= lowerBitrate {
+					filteredRepresentations = append(filteredRepresentations, r)
 				}
-
-				for _, r := range as.Representations {
-					if r.Bandwidth == nil {
-						continue
-					}
-					if *r.Bandwidth <= upperBitrate && *r.Bandwidth >= lowerBitrate {
-						filteredRepresentations = append(filteredRepresentations, r)
-					}
-				}
-				as.Representations = filteredRepresentations
-				if len(as.Representations) != 0 {
-					filteredAdaptationSets = append(filteredAdaptationSets, as)
-				}
-
+			}
+			as.Representations = filteredRepresentations
+			if len(as.Representations) != 0 {
+				filteredAdaptationSets = append(filteredAdaptationSets, as)
 			}
 
 		}
